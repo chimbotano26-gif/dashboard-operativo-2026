@@ -1,0 +1,10 @@
+{
+  "name": "Remix Serenazgo Nuevo Chimbote - Dashboard de Atenciones",
+  "description": "Sistema interactivo de registro, estadísticas en tiempo real y mapa de calor de operativos de la Subgerencia de Serenazgo de Nuevo Chimbote.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.45);
+}
+
+/* Leaflet map custom dark styling */
+.leaflet-container {
+  font-family: inherit;
+  background-color: #0b1329 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0f1f38 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0f1f38 !important;
+}
+
+/* Water Tube / Liquid Fill animations */
+@keyframes waterWave {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-20%); }
+}
+
+@keyframes bubbleRise {
+  0% { transform: translateY(100%) scale(0.5); opacity: 0; }
+  30% { opacity: 0.7; }
+  80% { opacity: 0.7; }
+  100% { transform: translateY(-20%) scale(1); opacity: 0; }
+}
+
+.animate-water-wave {
+  animation: waterWave 3.5s ease-in-out infinite;
+}
+
+.animate-bubble-1 {
+  animation: bubbleRise 2.8s ease-in infinite;
+}
+.animate-bubble-2 {
+  animation: bubbleRise 2.2s ease-in infinite 0.8s;
+}
+.animate-bubble-3 {
+  animation: bubbleRise 3.2s ease-in infinite 1.5s;
+}
+
+/* Thermal / Thermographic Heatmap Animation */
+@keyframes thermalPulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.8)) drop-shadow(0 0 24px rgba(239, 68, 68, 0.6));
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+  }
+}
+
+.animate-thermal-pulse {
+  animation: thermalPulse 3.2s ease-in-out infinite;
+}
+
+.thermal-plasma-gradient {
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(244,63,94,0.85) 25%, rgba(249,115,22,0.7) 50%, rgba(234,179,8,0.5) 70%, rgba(6,182,212,0.2) 85%, transparent 100%);
+}
+
+/* Tactical Grid Background - Never pure black, authentic command center radar feel */
+.tactical-grid-bg {
+  background-color: #071324 !important;
+  background-image: 
+    radial-gradient(ellipse at 50% 50%, rgba(14, 116, 144, 0.18) 0%, rgba(7, 19, 36, 0.95) 75%),
+    linear-gradient(rgba(14, 165, 233, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(14, 165, 233, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.035) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 64px 64px, 64px 64px, 16px 16px, 16px 16px !important;
+}
+
+/* Ensure Leaflet container itself is never pitch black */
+.leaflet-container {
+  background-color: #071324 !important;
+}
+
+/* Dark Tactical Map Filter for OpenStreetMap - high contrast, visible roads & labels */
+.dark-tactical-tiles .leaflet-tile-pane {
+  filter: invert(0.92) hue-rotate(195deg) brightness(0.92) contrast(1.15) saturate(0.55);
+  opacity: 0.88;
+}
+
+/* Satellite Crisp Filter */
+.satellite-tiles .leaflet-tile-pane {
+  filter: contrast(1.15) brightness(0.95) saturate(1.1);
+}
+
+/* Vector Road and Sector animations */
+.tactical-road-glow {
+  filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.65));
+}
+
+.tactical-perimeter-glow {
+  filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.8));
+}
+
+/* ========================================================================= */
+/* ESTILOS DE IMPRESIÓN OFICIAL (@media print) - PDF A4 HORIZONTAL NATIVO    */
+/* ========================================================================= */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .modal-ficha,
+  .modal-ficha *,
+  #report-container,
+  #report-container *,
+  #monthly-report-landscape-sheet,
+  #monthly-report-landscape-sheet * {
+    visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .modal-ficha {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  #report-container,
+  #monthly-report-landscape-sheet {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 2mm !important;
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    z-index: 999999 !important;
+  }
+
+  /* Forzar que las imágenes y marcas de agua se impriman sin bloqueos */
+  img {
+    display: block !important;
+    max-width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
