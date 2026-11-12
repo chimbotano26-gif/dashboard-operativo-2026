@@ -69,67 +69,14 @@ const getSectorCenter = (title: string): [number, number] => {
   return [-78.5265, -9.1265];
 };
 
-// Render Vectorial Holográfico de Patrullero 4x4 (Perspectiva 3/4 con circulina y detalle técnico)
 const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
-  <svg
-    className={small ? 'w-11 h-7' : 'w-32 h-14 mx-auto drop-shadow-[0_0_10px_rgba(34,211,238,0.85)]'}
-    viewBox="0 0 220 105"
-    fill="none"
-  >
-    <defs>
-      <linearGradient id="truckBodyGrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.45" />
-        <stop offset="60%" stopColor="#0284c7" stopOpacity="0.2" />
-        <stop offset="100%" stopColor="#082f49" stopOpacity="0.6" />
-      </linearGradient>
-    </defs>
-
-    {/* Sombra / Plataforma láser bajo llantas */}
-    <ellipse cx="110" cy="94" rx="88" ry="6" fill="#22d3ee" fillOpacity="0.18" />
-
-    {/* Tolva trasera y cabina doble 4x4 en perspectiva 3/4 */}
-    <path
-      d="M28,56 L32,38 L78,36 L98,18 L148,18 L174,38 L202,44 L206,66 L194,74 L176,74 C176,61 154,61 154,74 L92,74 C92,61 70,61 70,74 L34,74 L26,66 Z"
-      fill="url(#truckBodyGrad)"
-      stroke="#67e8f9"
-      strokeWidth="2.2"
-      strokeLinejoin="round"
+  <div className={`relative flex items-center justify-center ${small ? 'w-12 h-8' : 'w-40 h-20 mx-auto'}`}>
+    <img
+      src="/camioneta.jpg"
+      alt="Patrullero 4x4"
+      className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]"
     />
-
-    {/* Líneas estructurales de carrocería y puertas */}
-    <path d="M80,37 L173,39" stroke="#22d3ee" strokeWidth="1.3" strokeOpacity="0.85" />
-    <path d="M124,19 L124,72" stroke="#22d3ee" strokeWidth="1.2" strokeOpacity="0.7" />
-    <path d="M96,38 L96,72" stroke="#22d3ee" strokeWidth="1.2" strokeOpacity="0.7" />
-
-    {/* Parabrisas y ventanas laterales */}
-    <polygon
-      points="102,22 145,22 166,37 96,37"
-      fill="#083344"
-      stroke="#a5f3fc"
-      strokeWidth="1.5"
-    />
-    <line x1="124" y1="22" x2="124" y2="37" stroke="#67e8f9" strokeWidth="1.5" />
-
-    {/* Parrilla frontal, faros LED y defensa */}
-    <rect x="195" y="46" width="9" height="12" rx="2" fill="#e0f2fe" stroke="#22d3ee" strokeWidth="1.2" />
-    <path d="M176,47 L193,47 L193,61 L176,61 Z" fill="#0c4a6e" stroke="#38bdf8" strokeWidth="1.2" />
-    <line x1="178" y1="51" x2="191" y2="51" stroke="#7dd3fc" strokeWidth="1" />
-    <line x1="178" y1="56" x2="191" y2="56" stroke="#7dd3fc" strokeWidth="1" />
-
-    {/* Circulina Táctica de Emergencia (Azul/Rojo Neón) */}
-    <rect x="114" y="12" width="14" height="5" rx="1.5" fill="#22d3ee" stroke="#ffffff" strokeWidth="0.8" />
-    <rect x="128" y="12" width="14" height="5" rx="1.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="0.8" />
-
-    {/* Rueda Trasera */}
-    <circle cx="81" cy="75" r="16" fill="#030b17" stroke="#67e8f9" strokeWidth="2.5" />
-    <circle cx="81" cy="75" r="9" fill="#082f49" stroke="#22d3ee" strokeWidth="1.5" />
-    <circle cx="81" cy="75" r="3" fill="#a5f3fc" />
-
-    {/* Rueda Delantera */}
-    <circle cx="165" cy="75" r="16" fill="#030b17" stroke="#67e8f9" strokeWidth="2.5" />
-    <circle cx="165" cy="75" r="9" fill="#082f49" stroke="#22d3ee" strokeWidth="1.5" />
-    <circle cx="165" cy="75" r="3" fill="#a5f3fc" />
-  </svg>
+  </div>
 );
 
 export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
@@ -298,38 +245,43 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       }
       if (!isMounted || !mapContainerRef.current || mapInstanceRef.current) return;
       const maplibregl = (window as any).maplibregl;
+
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: {
+          version: 8,
+          sources: {
+            'osm-dark': {
+              type: 'raster',
+              tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+              tileSize: 256
+            }
+          },
+          layers: [
+            {
+              id: 'osm-dark-layer',
+              type: 'raster',
+              source: 'osm-dark',
+              paint: {
+                'raster-brightness-min': 0.12,
+                'raster-brightness-max': 0.95,
+                'raster-hue-rotate': 185,
+                'raster-saturation': 0.65,
+                'raster-contrast': 0.35
+              }
+            }
+          ]
+        },
         center: getSectorCenter(activeTitle),
-        zoom: 16.0,
-        pitch: 65,
-        bearing: -28,
+        zoom: 15.8,
+        pitch: 62,
+        bearing: -25,
         antialias: true
       });
+
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.on('load', () => {
-        if (!isMounted) return;
-        if (!map.getSource('openmaptiles-3d')) {
-          map.addSource('openmaptiles-3d', {
-            type: 'vector',
-            url: 'https://tiles.openfreemap.org/planet'
-          });
-          map.addLayer({
-            id: '3d-buildings-hud',
-            source: 'openmaptiles-3d',
-            'source-layer': 'building',
-            type: 'fill-extrusion',
-            minzoom: 13,
-            paint: {
-              'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'render_height'], 0, '#0c4a6e', 12, '#06b6d4', 35, '#67e8f9'],
-              'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 11],
-              'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-              'fill-extrusion-opacity': 0.85
-            }
-          });
-        }
-        setMapReady(true);
+        if (isMounted) setMapReady(true);
       });
       mapInstanceRef.current = map;
     };
@@ -349,7 +301,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (!map || !maplibregl) return;
 
     const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: 16.1, pitch: 65, bearing: -28, speed: 1.4 });
+    map.flyTo({ center: [lng, lat], zoom: 16.0, pitch: 62, bearing: -25, speed: 1.4 });
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -383,19 +335,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      {/* Atmósfera Volumétrica Holográfica */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.28),transparent_65%)] pointer-events-none" />
       <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.08)_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
 
-      {/* CHASIS PRINCIPAL HOLOGRÁFICO */}
-      <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/60 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_70px_rgba(6,182,212,0.3),inset_0_0_50px_rgba(6,182,212,0.1)] p-3 sm:p-4">
-        {/* Esquinas iluminadas estilo visor */}
-        <div className="absolute -top-[2px] -left-[2px] w-11 h-11 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_18px_rgba(34,211,238,0.7)]" />
-        <div className="absolute -top-[2px] -right-[2px] w-11 h-11 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_18px_rgba(34,211,238,0.7)]" />
-        <div className="absolute -bottom-[2px] -left-[2px] w-11 h-11 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
-        <div className="absolute -bottom-[2px] -right-[2px] w-11 h-11 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
-
-        {/* HEADER SUPERIOR DE TELEMETRÍA */}
+      <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/60 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_70px_rgba(6,182,212,0.3)] p-3 sm:p-4">
         <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex items-center gap-3 w-full lg:w-auto">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.55)] shrink-0">
@@ -413,7 +356,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           </div>
 
           <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-5 py-2.5 text-center shadow-[0_0_35px_rgba(6,182,212,0.4)]">
-            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
+            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase">
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
@@ -435,7 +378,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer transition"
             >
               <Printer className="w-4 h-4 text-cyan-200" />
               <span>EXPORTAR FICHA</span>
@@ -444,9 +387,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* COLUMNA IZQUIERDA: SECTORIZACIÓN MULTI-SELECCIÓN */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-emerald-400" />
@@ -476,7 +418,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               {searchTerm.trim() !== '' && filteredUrbanizaciones.length > 1 && (
                 <button
                   onClick={selectAllFiltered}
-                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   AGRUPAR TODOS ({filteredUrbanizaciones.length})
@@ -511,9 +453,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   return (
                     <div
                       key={urb.nombre}
-                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border transition-all ${
+                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border ${
                         isChecked
-                          ? 'bg-gradient-to-r from-emerald-500/35 via-cyan-500/30 to-blue-900/50 border-emerald-300 text-white font-black shadow-[0_0_18px_rgba(16,185,129,0.45)]'
+                          ? 'bg-gradient-to-r from-emerald-500/35 via-cyan-500/30 to-blue-900/50 border-emerald-300 text-white font-black'
                           : 'bg-[#071930]/85 border-cyan-500/30 text-cyan-200/85 hover:border-cyan-400'
                       }`}
                     >
@@ -535,7 +477,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Rango de Turnos con 3 Diales */}
             <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">RANGO DE TURNOS</h3>
@@ -559,14 +500,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center transition ${
-                        active ? 'bg-cyan-500/30 border-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-[#030b17] border-cyan-500/30'
+                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center ${
+                        active ? 'bg-cyan-500/30 border-cyan-300' : 'bg-[#030b17] border-cyan-500/30'
                       }`}
                     >
                       <div className="relative w-12 h-12 flex items-center justify-center">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
                           <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="4" fill="transparent" />
-                          <circle cx="24" cy="24" r="13" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
                           <circle cx="24" cy="24" r={r} stroke={t.color} strokeWidth="4" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
                         </svg>
                         <span className="absolute text-[10px] font-mono font-black text-white">{t.pct}%</span>
@@ -578,7 +518,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Sliders Tácticos */}
             <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 space-y-2.5">
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-cyan-200 mb-1">
@@ -602,11 +541,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </aside>
 
-          {/* COLUMNA CENTRAL */}
           <main className="lg:col-span-6 flex flex-col gap-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* KPI 1: Total Incidencias */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block">TOTAL INCIDENCIAS</span>
                 <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
                 <div className="my-1 relative flex items-center justify-center">
@@ -614,17 +551,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <path d="M0,22 L22,22 L29,8 L35,36 L41,3 L47,41 L53,10 L59,32 L65,22 L140,22" fill="none" stroke="#ec4899" strokeWidth="2" />
                     <path d="M0,22 L75,22 L82,6 L88,38 L94,4 L100,40 L106,12 L112,30 L118,22 L140,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
                   </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] bg-[#06162b]/90 px-2 rounded">
+                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 bg-[#06162b]/90 px-2 rounded">
                     {hudData.total.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              {/* KPI 2: Patrullaje Activo */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">PATRULLAJE ACTIVO</span>
                 <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
+                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center">
                     <span className="text-sm font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
                     <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
                   </div>
@@ -634,27 +570,24 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* KPI 3: Móvil en Operación con Camioneta 4x4 3/4 Holográfica */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2.5 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2 text-center">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block">MÓVIL EN OPERACIÓN</span>
-                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_8px_rgba(34,211,238,0.85)]">
+                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate">
                   {hudData.topVehiculo}
                 </div>
                 <PatrolTruckHologram />
               </div>
 
-              {/* KPI 4: Turno Crítico */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">TURNO CRÍTICO</span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.55)]">
+                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center">
                   <span className="text-xs font-black font-mono text-white">{hudData.topTurnoPct}%</span>
                   <span className="text-[7px] font-mono text-cyan-300">{hudData.topTurno}</span>
                 </div>
               </div>
             </div>
 
-            {/* MAPA 3D REAL MAPLIBRE GL JS */}
-            <div className="border-2 border-cyan-400/80 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.25)]">
+            <div className="border-2 border-cyan-400/80 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden">
               <div className="flex items-center justify-between mb-1.5 px-1">
                 <span className="text-xs font-mono font-black text-white uppercase flex items-center gap-2 truncate pr-2">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
@@ -675,8 +608,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* MATRIZ DE FRECUENCIA DE INCIDENCIAS */}
-            <div className="border border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
+            <div className="border border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5">
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-xs font-mono font-black text-white uppercase">MATRIZ DE FRECUENCIA DE INCIDENCIAS</h3>
                 <span className="text-[10px] font-mono text-emerald-300 font-bold">{hudData.total.toLocaleString()} CASOS</span>
@@ -692,10 +624,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                         <div
                           className={`h-full rounded-xs ${
                             idx === 0
-                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500 shadow-[0_0_12px_#f43f5e]'
+                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500'
                               : idx === 1
-                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400 shadow-[0_0_12px_#f59e0b]'
-                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 shadow-[0_0_10px_#22d3ee]'
+                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400'
+                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300'
                           }`}
                           style={{ width: `${Math.max(item.porcentaje, 5)}%` }}
                         />
@@ -710,7 +642,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </main>
 
-          {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
             <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
               <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
@@ -719,8 +650,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
                   <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
-                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#22d3ee]" />
-                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#f97316]" />
+                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" />
+                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#10b981" strokeWidth="5" strokeDasharray={`${(hudData.pctNoche / 100) * c3} ${c3}`} strokeLinecap="round" fill="transparent" />
                 </svg>
                 <div className="absolute text-center">
