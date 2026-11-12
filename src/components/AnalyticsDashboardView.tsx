@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Shield, Printer, Search, Crosshair,
-  Settings, Wifi, CheckSquare, Square, Layers, X, Compass, RotateCcw, Activity
+  Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
+  Square, Layers, X, Compass, RotateCcw, Activity, FileDown, Edit3
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -87,8 +87,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedUrbs, setSelectedUrbs] = useState<string[]>([]);
+  const [customGroupName, setCustomGroupName] = useState<string>('');
   const [selectedTurno, setSelectedTurno] = useState<string>('TODOS');
   const [minCasosFilter, setMinCasosFilter] = useState<number>(0);
+  const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -114,10 +116,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   }, [selectedUrbs, urbanizaciones]);
 
   const activeTitle = useMemo(() => {
+    if (customGroupName.trim()) return cleanText(customGroupName);
     if (activeUrbsList.length === 0) return 'TODOS LOS SECTORES';
     if (activeUrbsList.length === 1) return activeUrbsList[0];
-    return `GRUPO CONSOLIDADO (${activeUrbsList.length} SECTORES)`;
-  }, [activeUrbsList]);
+    return `GRUPO CONSOLIDADO (${activeUrbsList.length} DENOMINACIONES)`;
+  }, [customGroupName, activeUrbsList]);
 
   const filteredUrbanizaciones = useMemo(() => {
     return urbanizaciones.filter((u) => {
@@ -140,17 +143,24 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   const selectSingleUrb = (urbName: string) => {
     setSelectedUrbs([urbName]);
+    setCustomGroupName('');
     if (onFilterZona) onFilterZona(urbName);
   };
 
   const selectAllFiltered = () => {
     const allNames = filteredUrbanizaciones.map((u) => u.nombre);
-    if (allNames.length > 0) setSelectedUrbs(allNames);
+    if (allNames.length > 0) {
+      setSelectedUrbs(allNames);
+      if (!customGroupName.trim() && searchTerm.trim()) {
+        setCustomGroupName(cleanText(searchTerm));
+      }
+    }
   };
 
   const handleResetAllFilters = () => {
     setSearchTerm('');
     setSelectedUrbs([]);
+    setCustomGroupName('');
     setSelectedTurno('TODOS');
     setMinCasosFilter(0);
     if (onFilterZona) onFilterZona('');
@@ -217,22 +227,196 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, [recordsInScope]);
 
-  const frecuenciaModalidades = useMemo(() => {
+  // Tabla completa de frecuencias (todas las modalidades para el PDF, top 8 para la pantalla)
+  const todasFrecuenciasModalidades = useMemo(() => {
     const counts: Record<string, number> = {};
     recordsInScope.forEach((r) => {
       const mod = getModalidad(r);
       counts[mod] = (counts[mod] || 0) + 1;
     });
     const total = recordsInScope.length || 1;
+    let acumulado = 0;
     return Object.entries(counts)
       .map(([modalidad, count]) => ({
         modalidad,
         count,
-        porcentaje: Number(((count / total) * 100).toFixed(1))
+        porcentaje: Number(((count / total) * 100).toFixed(2))
       }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 7);
+      .map((item) => {
+        acumulado += item.porcentaje;
+        return {
+          ...item,
+          acumulado: Math.min(100, Number(acumulado.toFixed(2)))
+        };
+      });
   }, [recordsInScope]);
+
+  const frecuenciaModalidadesTop = useMemo(
+    () => todasFrecuenciasModalidades.slice(0, 8),
+    [todasFrecuenciasModalidades]
+  );
+
+  // Generación y descarga directa de PDF con tabla de frecuencias y nombre personalizado
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const loadScript = (src: string) =>
+        new Promise<void>((resolve, reject) => {
+          if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+          }
+          const s = document.createElement('script');
+          s.src = src;
+          s.async = true;
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+          document.head.appendChild(s);
+        });
+
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+
+      const { jsPDF } = (window as any).jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const fechaEmision = new Date().toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Encabezado Institucional
+      doc.setFillColor(8, 32, 64);
+      doc.rect(0, 0, 210, 32, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE', 14, 12);
+      doc.setFontSize(9.5);
+      doc.setTextColor(103, 232, 249);
+      doc.text('GERENCIA DE SEGURIDAD CIUDADANA Y GESTIÓN DEL RIESGO DE DESASTRES - SERENAZGO', 14, 18);
+      doc.setFontSize(8.5);
+      doc.setTextColor(220, 235, 245);
+      doc.text(`FICHA ESTADÍSTICA DE INCIDENCIAS POR SECTOR  |  EMISIÓN: ${fechaEmision}`, 14, 25);
+
+      // Título del Sector Consolidado (Nombre personalizado por el usuario)
+      doc.setDrawColor(6, 182, 212);
+      doc.setFillColor(240, 249, 255);
+      doc.roundedRect(14, 37, 182, 24, 2, 2, 'FD');
+
+      doc.setTextColor(8, 47, 73);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DENOMINACIÓN CONSOLIDADA DEL SECTOR ANALIZADO:', 18, 43);
+
+      doc.setFontSize(12);
+      doc.setTextColor(12, 74, 110);
+      doc.text(activeTitle, 18, 50);
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(51, 65, 85);
+      const variantesTexto = `Registros unificados (${activeUrbsList.length}): ${activeUrbsList.join(' | ')}`;
+      const lineasVariantes = doc.splitTextToSize(variantesTexto, 174);
+      doc.text(lineasVariantes.slice(0, 2), 18, 55.5);
+
+      // Cuadro Resumen KPI
+      (doc as any).autoTable({
+        startY: 65,
+        head: [['TOTAL INCIDENCIAS', 'TURNO CRÍTICO', 'MÓVIL PREDOMINANTE', 'FILTRO TURNO']],
+        body: [[
+          `${hudData.total.toLocaleString()} CASOS`,
+          `${hudData.topTurno} (${hudData.topTurnoPct}%)`,
+          `${hudData.topVehiculo} (${hudData.topVehiculoCount})`,
+          selectedTurno
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [14, 116, 144], textColor: 255, fontSize: 8, halign: 'center' },
+        bodyStyles: { fontSize: 9, fontStyle: 'bold', halign: 'center', textColor: [15, 23, 42] },
+        margin: { left: 14, right: 14 }
+      });
+
+      // Tabla Principal de Frecuencia de Incidencias
+      const afterKpiY = (doc as any).lastAutoTable.finalY + 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(8, 47, 73);
+      doc.text('1. TABLA DE FRECUENCIA DE MODALIDADES E INCIDENCIAS', 14, afterKpiY);
+
+      const tableRows = todasFrecuenciasModalidades.map((item, index) => [
+        index + 1,
+        item.modalidad,
+        item.count.toLocaleString(),
+        `${item.porcentaje.toFixed(2)}%`,
+        `${item.acumulado.toFixed(2)}%`
+      ]);
+
+      tableRows.push([
+        '',
+        'TOTAL GENERAL CONSOLIDADO',
+        hudData.total.toLocaleString(),
+        '100.00%',
+        '100.00%'
+      ]);
+
+      (doc as any).autoTable({
+        startY: afterKpiY + 3,
+        head: [['N°', 'TIPO / MODALIDAD DE INCIDENCIA', 'FRECUENCIA (fi)', 'PORCENTAJE (hi%)', '% ACUMULADO']],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [8, 32, 64], textColor: 255, fontSize: 8, halign: 'center' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 12 },
+          1: { halign: 'left' },
+          2: { halign: 'right', cellWidth: 28 },
+          3: { halign: 'right', cellWidth: 30 },
+          4: { halign: 'right', cellWidth: 28 }
+        },
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        didParseCell: (data: any) => {
+          if (data.row.index === tableRows.length - 1) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [224, 242, 254];
+            data.cell.styles.textColor = [8, 47, 73];
+          }
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      // Tabla de Distribución por Turnos
+      const afterFreqY = (doc as any).lastAutoTable.finalY + 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(8, 47, 73);
+      doc.text('2. DISTRIBUCIÓN OPERATIVA POR TURNO DE SERVICIO', 14, afterFreqY);
+
+      (doc as any).autoTable({
+        startY: afterFreqY + 3,
+        head: [['TURNO DE PATRULLAJE', 'CANTIDAD DE INTERVENCIONES', 'PARTICIPACIÓN (%)']],
+        body: [
+          ['TURNO MAÑANA', hudData.turnosCount.MAÑANA.toLocaleString(), `${hudData.pctManana}%`],
+          ['TURNO TARDE', hudData.turnosCount.TARDE.toLocaleString(), `${hudData.pctTarde}%`],
+          ['TURNO NOCHE', hudData.turnosCount.NOCHE.toLocaleString(), `${hudData.pctNoche}%`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [15, 118, 110], textColor: 255, fontSize: 8, halign: 'center' },
+        bodyStyles: { fontSize: 8.5, halign: 'center' },
+        margin: { left: 14, right: 14 }
+      });
+
+      const fileNameSafe = activeTitle.replace(/[^A-Z0-9_-]/gi, '_').slice(0, 40);
+      doc.save(`Reporte_Frecuencia_${fileNameSafe}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      window.print();
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -402,18 +586,19 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
             <button
               onClick={handleResetAllFilters}
-              className="flex items-center gap-1.5 px-3.5 py-3 bg-rose-500/25 hover:bg-rose-500/40 border border-rose-400 rounded-xl text-rose-100 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
+              className="flex items-center gap-1.5 px-3 py-3 bg-rose-500/25 hover:bg-rose-500/40 border border-rose-400 rounded-xl text-rose-100 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
             >
               <RotateCcw className="w-4 h-4" />
               <span>BORRAR FILTROS</span>
             </button>
 
             <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-4 py-3 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              className="flex items-center gap-1.5 px-4 py-3 bg-gradient-to-r from-emerald-500/40 to-cyan-500/40 hover:from-emerald-400/60 hover:to-cyan-400/60 border-2 border-emerald-300 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_25px_rgba(16,185,129,0.5)] cursor-pointer transition disabled:opacity-50"
             >
-              <Printer className="w-4 h-4 text-cyan-200" />
-              <span>FICHA</span>
+              <FileDown className="w-4 h-4 text-emerald-200" />
+              <span>{exportingPdf ? 'GENERANDO...' : 'DESCARGAR PDF'}</span>
             </button>
           </div>
         </header>
@@ -428,20 +613,21 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                  SECTORIZACIÓN / OPERATIVO
+                  SECTORIZACIÓN / AGRUPAR
                 </h2>
                 <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-400/50 font-bold">
                   {activeUrbsList.length} MARCADO{activeUrbsList.length > 1 ? 'S' : ''}
                 </span>
               </div>
 
+              {/* Buscador de variantes */}
               <div className="relative mb-2">
                 <Search className="w-3.5 h-3.5 text-cyan-300 absolute left-2.5 top-2.5" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar y agrupar lugar..."
+                  placeholder="Filtrar ej: CASUARINAS..."
                   className="w-full bg-[#020813] border border-cyan-400/60 focus:border-emerald-400 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-white placeholder-cyan-700 focus:outline-none"
                 />
                 {searchTerm && (
@@ -451,20 +637,34 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 )}
               </div>
 
+              {/* NOMBRE PERSONALIZADO PARA EL RESUMEN Y EL PDF */}
+              <div className="mb-2.5 p-2 rounded-lg bg-[#030c1a] border border-amber-400/50">
+                <label className="text-[9px] font-mono font-bold text-amber-300 uppercase flex items-center gap-1 mb-1">
+                  <Edit3 className="w-3 h-3" /> NOMBRE OFICIAL EN RESUMEN / PDF:
+                </label>
+                <input
+                  type="text"
+                  value={customGroupName}
+                  onChange={(e) => setCustomGroupName(e.target.value)}
+                  placeholder="Ej: URB. CASUARINAS (SIN A.H.)"
+                  className="w-full bg-[#02060e] border border-amber-400/40 focus:border-amber-300 rounded px-2 py-1 text-xs font-mono font-bold text-amber-100 placeholder-cyan-800 focus:outline-none"
+                />
+              </div>
+
               {searchTerm.trim() !== '' && filteredUrbanizaciones.length > 1 && (
                 <button
                   onClick={selectAllFiltered}
                   className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
-                  AGRUPAR TODOS ({filteredUrbanizaciones.length})
+                  MARCAR TODOS ({filteredUrbanizaciones.length}) Y LUEGO DESMARCA A.H.
                 </button>
               )}
 
               {activeUrbsList.length > 1 && (
                 <div className="mb-2 p-2 rounded-lg bg-cyan-950/70 border border-cyan-400/50">
                   <div className="flex items-center justify-between text-[9px] font-mono text-cyan-200 mb-1">
-                    <span>SECTORES AGRUPADOS:</span>
+                    <span>INCLUIDOS EN EL PDF ({activeUrbsList.length}):</span>
                     <button onClick={() => selectSingleUrb(activeUrbsList[0])} className="text-amber-300 underline cursor-pointer">
                       LIMPIAR
                     </button>
@@ -474,7 +674,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       <span
                         key={name}
                         onClick={() => toggleUrbSelection(name)}
-                        className="text-[9px] font-mono bg-emerald-500/25 border border-emerald-400 text-emerald-100 px-1.5 py-0.5 rounded cursor-pointer"
+                        className="text-[9px] font-mono bg-emerald-500/25 border border-emerald-400 text-emerald-100 px-1.5 py-0.5 rounded cursor-pointer hover:bg-rose-500/30"
+                        title="Clic para excluir del PDF"
                       >
                         {name} ×
                       </span>
@@ -483,15 +684,15 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1.5 max-h-[235px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[210px] overflow-y-auto pr-1">
                 {filteredUrbanizaciones.map((urb) => {
                   const isChecked = activeUrbsList.includes(urb.nombre);
                   return (
                     <div
                       key={urb.nombre}
-                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border transition-all ${
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between border transition-all ${
                         isChecked
-                          ? 'bg-gradient-to-r from-emerald-500/40 via-cyan-500/35 to-blue-900/50 border-emerald-300 text-white font-black shadow-[0_0_20px_rgba(16,185,129,0.5)]'
+                          ? 'bg-gradient-to-r from-emerald-500/40 via-cyan-500/35 to-blue-900/50 border-emerald-300 text-white font-black shadow-[0_0_15px_rgba(16,185,129,0.45)]'
                           : 'bg-[#071930]/85 border-cyan-500/30 text-cyan-200/85 hover:border-cyan-400'
                       }`}
                     >
@@ -501,6 +702,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       </button>
                       <button
                         onClick={() => selectSingleUrb(urb.nombre)}
+                        title="Seleccionar solo este"
                         className={`text-[10px] px-2 py-0.5 rounded cursor-pointer shrink-0 ${
                           isChecked ? 'bg-emerald-400 text-slate-950 font-black' : 'bg-slate-950 text-cyan-300 border border-cyan-500/40'
                         }`}
@@ -537,28 +739,28 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition ${
+                      className={`p-2 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition ${
                         active ? 'bg-cyan-500/30 border-cyan-300' : 'bg-[#030b17] border-cyan-500/35 hover:border-cyan-400'
                       }`}
                       style={{ boxShadow: active ? `0 0 22px ${t.glow}` : undefined }}
                     >
-                      <div className="relative w-20 h-20 flex items-center justify-center">
-                        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 72 72">
+                      <div className="relative w-16 h-16 flex items-center justify-center">
+                        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 72 72">
                           <circle cx="36" cy="36" r={r} stroke="#0c2238" strokeWidth="5" fill="transparent" />
                           <circle cx="36" cy="36" r="22" stroke={t.color} strokeWidth="2" strokeOpacity="0.6" fill={t.color} fillOpacity="0.12" />
                           <circle cx="36" cy="36" r="14" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.4" fill="transparent" />
                           <circle cx="36" cy="36" r={r} stroke={t.color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
                         </svg>
-                        <span className="absolute text-sm font-mono font-black text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">{t.pct}%</span>
+                        <span className="absolute text-xs font-mono font-black text-white">{t.pct}%</span>
                       </div>
-                      <span className="text-[11px] font-mono font-bold text-cyan-100 mt-1.5 tracking-wider">{t.label}</span>
+                      <span className="text-[10px] font-mono font-bold text-cyan-100 mt-1">{t.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 space-y-2.5">
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 space-y-2">
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-cyan-200 mb-1">
                   <span>FILTRO DENSIDAD MÍNIMA</span>
@@ -574,7 +776,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   className="w-full accent-emerald-400 cursor-pointer h-1.5 bg-cyan-950 rounded-lg"
                 />
               </div>
-              <div className="pt-2 border-t border-cyan-500/30 flex items-center justify-between text-[10px] font-mono text-cyan-300">
+              <div className="pt-1.5 border-t border-cyan-500/30 flex items-center justify-between text-[10px] font-mono text-cyan-300">
                 <span>AGENTE LÍDER:</span>
                 <span className="text-white font-bold truncate max-w-[155px]">{hudData.topAgente}</span>
               </div>
@@ -583,12 +785,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           {/* COLUMNA CENTRAL */}
           <main className="lg:col-span-6 flex flex-col gap-4">
-            {/* 4 TARJETAS KPI DE ALTA DENSIDAD SIN ESPACIOS VACÍOS */}
+            {/* 4 TARJETAS KPI */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* KPI 1: TOTAL INCIDENCIAS */}
+              {/* KPI 1 */}
               <div className="border-2 border-cyan-400/80 bg-gradient-to-b from-[#0b2950] via-[#061830] to-[#030b17] rounded-xl p-2.5 text-center flex flex-col justify-between min-h-[155px] relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.28)]">
-                <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-300/80" />
-                <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-300/80" />
                 <div>
                   <span className="text-[10px] font-mono font-black text-cyan-200 uppercase block tracking-widest">TOTAL INCIDENCIAS</span>
                   <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
@@ -624,10 +824,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* KPI 2: PATRULLAJE ACTIVO */}
+              {/* KPI 2 */}
               <div className="border-2 border-cyan-400/80 bg-gradient-to-b from-[#0b2950] via-[#061830] to-[#030b17] rounded-xl p-2.5 text-center flex flex-col justify-between min-h-[155px] relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.28)]">
-                <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-300/80" />
-                <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-300/80" />
                 <span className="text-[10px] font-mono font-black text-cyan-200 uppercase block tracking-widest">PATRULLAJE ACTIVO</span>
 
                 <div className="flex items-center justify-center gap-2 my-auto">
@@ -636,7 +834,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <span className="text-2xl font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
                     <span className="text-[8px] font-mono font-bold text-cyan-300 mt-0.5">MÓVILES</span>
                   </div>
-                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-cyan-400/80 flex items-center justify-center bg-cyan-950/60 shadow-[inset_0_0_15px_rgba(34,211,238,0.3)]">
+                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-cyan-400/80 flex items-center justify-center bg-cyan-950/60">
                     <PatrolTruckHologram small />
                   </div>
                 </div>
@@ -647,10 +845,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* KPI 3: MÓVIL EN OPERACIÓN */}
+              {/* KPI 3 */}
               <div className="border-2 border-cyan-400/80 bg-gradient-to-b from-[#0b2950] via-[#061830] to-[#030b17] rounded-xl p-2.5 text-center flex flex-col justify-between min-h-[155px] relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.28)]">
-                <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-300/80" />
-                <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-300/80" />
                 <div>
                   <span className="text-[10px] font-mono font-black text-cyan-200 uppercase block tracking-widest">MÓVIL EN OPERACIÓN</span>
                   <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]">
@@ -666,10 +862,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* KPI 4: TURNO CRÍTICO (TACÓMETRO RADAR MULTI-ANILLO) */}
+              {/* KPI 4 */}
               <div className="border-2 border-cyan-400/80 bg-gradient-to-b from-[#0b2950] via-[#061830] to-[#030b17] rounded-xl p-2.5 text-center flex flex-col justify-between min-h-[155px] relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.28)]">
-                <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-300/80" />
-                <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-300/80" />
                 <span className="text-[10px] font-mono font-black text-cyan-200 uppercase tracking-widest block">
                   TURNO CRÍTICO
                 </span>
@@ -719,7 +913,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* MAPA OSCURO CIAN DE ALTO CONTRASTE */}
+            {/* MAPA OSCURO CIAN */}
             <div className="border-2 border-cyan-400/80 bg-[#020813] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]">
               <div className="flex items-center justify-between mb-1.5 px-1">
                 <span className="text-xs font-mono font-black text-white uppercase flex items-center gap-2 truncate pr-2">
@@ -732,7 +926,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
               </div>
 
-              <div className="w-full h-60 sm:h-64 rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813]">
+              <div className="w-full h-56 sm:h-60 rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813]">
                 <div ref={mapContainerRef} className="w-full h-full" />
 
                 <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/90 backdrop-blur-md rounded-lg p-2 pointer-events-none flex items-center gap-2.5">
@@ -759,15 +953,20 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-xs font-mono font-black text-white uppercase flex items-center gap-1.5">
                   <Activity className="w-4 h-4 text-cyan-400" />
-                  MATRIZ DE FRECUENCIA DE INCIDENCIAS
+                  MATRIZ DE FRECUENCIA ({activeTitle})
                 </h3>
-                <span className="text-[10px] font-mono text-emerald-300 font-bold">{hudData.total.toLocaleString()} CASOS</span>
+                <button
+                  onClick={handleExportPdf}
+                  className="text-[10px] font-mono bg-emerald-500/20 hover:bg-emerald-500/35 border border-emerald-400 text-emerald-200 px-2.5 py-0.5 rounded font-bold cursor-pointer flex items-center gap-1"
+                >
+                  <FileDown className="w-3 h-3" /> PDF TABLA ({todasFrecuenciasModalidades.length} TIPOS)
+                </button>
               </div>
               <div className="space-y-2 max-h-[205px] overflow-y-auto pr-1">
-                {frecuenciaModalidades.length === 0 ? (
+                {frecuenciaModalidadesTop.length === 0 ? (
                   <div className="text-center py-6 text-xs font-mono text-cyan-500">SIN INCIDENCIAS EN ESTE FILTRO</div>
                 ) : (
-                  frecuenciaModalidades.map((item, idx) => (
+                  frecuenciaModalidadesTop.map((item, idx) => (
                     <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
                       <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-white truncate">{item.modalidad}</span>
                       <div className="col-span-5 sm:col-span-6 bg-[#020813] h-4 rounded-sm border border-cyan-400/60 p-0.5 overflow-hidden">
