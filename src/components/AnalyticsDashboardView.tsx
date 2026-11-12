@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Shield,
   Printer,
@@ -7,7 +7,12 @@ import {
   Lock,
   Crosshair,
   Settings,
-  Wifi
+  Wifi,
+  CheckSquare,
+  Square,
+  Layers,
+  X,
+  Compass
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -71,15 +76,48 @@ const getTurno = (r: any): string => {
   return 'NO REGISTRADO';
 };
 
+// Coordenadas base de sectores conocidos de Nuevo Chimbote para centrar el mapa 3D
+const SECTOR_COORDS: Record<string, [number, number]> = {
+  CASUARINAS: [-78.5238, -9.1312],
+  'BUENOS AIRES': [-78.5325, -9.1245],
+  BELLAMAR: [-78.5278, -9.1195],
+  GARATEA: [-78.5155, -9.1290],
+  BRISAS: [-78.5360, -9.1335],
+  PRADERA: [-78.5180, -9.1365],
+  BRUCE: [-78.5290, -9.1280],
+  PACIFICO: [-78.5340, -9.1210],
+  'LOS HEROES': [-78.5195, -9.1235],
+  '3 DE OCTUBRE': [-78.5130, -9.1340],
+  '03 DE OCTUBRE': [-78.5130, -9.1340],
+  '1 DE MAYO': [-78.5390, -9.1260],
+  '1° DE MAYO': [-78.5390, -9.1260],
+  'VILLA MARIA': [-78.5430, -9.1160],
+  'SAN LUIS': [-78.5210, -9.1180]
+};
+
+const getSectorCenter = (title: string): [number, number] => {
+  const upper = cleanText(title);
+  for (const [key, coords] of Object.entries(SECTOR_COORDS)) {
+    if (upper.includes(key)) return coords;
+  }
+  // Centro táctico por defecto: Plaza Mayor / Casuarinas - Nuevo Chimbote
+  return [-78.5265, -9.1265];
+};
+
 export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   records = [],
   onFilterZona,
   onFilterTurno
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedUrb, setSelectedUrb] = useState<string>('');
+  const [selectedUrbs, setSelectedUrbs] = useState<string[]>([]);
   const [selectedTurno, setSelectedTurno] = useState<string>('TODOS');
   const [minCasosFilter, setMinCasosFilter] = useState<number>(0);
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const [mapReady, setMapReady] = useState<boolean>(false);
 
   // 1. Urbanizaciones únicas y limpias
   const urbanizaciones = useMemo(() => {
@@ -95,12 +133,18 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       .sort((a, b) => b.count - a.count);
   }, [records]);
 
-  const activeUrb = useMemo(() => {
-    if (selectedUrb) return selectedUrb;
-    const casuarinas = urbanizaciones.find((u) => u.nombre.includes('CASUARINAS'));
-    if (casuarinas) return casuarinas.nombre;
-    return urbanizaciones[0]?.nombre || 'CASUARINAS';
-  }, [selectedUrb, urbanizaciones]);
+  const activeUrbsList = useMemo(() => {
+    if (selectedUrbs.length > 0) return selectedUrbs;
+    const defaultCasuarinas = urbanizaciones.find((u) => u.nombre.includes('CASUARINAS'));
+    if (defaultCasuarinas) return [defaultCasuarinas.nombre];
+    return urbanizaciones[0] ? [urbanizaciones[0].nombre] : [];
+  }, [selectedUrbs, urbanizaciones]);
+
+  const activeTitle = useMemo(() => {
+    if (activeUrbsList.length === 0) return 'TODOS LOS SECTORES';
+    if (activeUrbsList.length === 1) return activeUrbsList[0];
+    return `GRUPO CONSOLIDADO (${activeUrbsList.length} SECTORES)`;
+  }, [activeUrbsList]);
 
   const filteredUrbanizaciones = useMemo(() => {
     return urbanizaciones.filter((u) => {
@@ -110,18 +154,44 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     });
   }, [urbanizaciones, searchTerm, minCasosFilter]);
 
-  // 2. Registros filtrados
+  const toggleUrbSelection = (urbName: string) => {
+    setSelectedUrbs((prev) => {
+      const current = prev.length > 0 ? prev : activeUrbsList;
+      if (current.includes(urbName)) {
+        const next = current.filter((item) => item !== urbName);
+        return next.length > 0 ? next : [urbName];
+      } else {
+        const next = [...current, urbName];
+        if (onFilterZona) onFilterZona(next.join(', '));
+        return next;
+      }
+    });
+  };
+
+  const selectSingleUrb = (urbName: string) => {
+    setSelectedUrbs([urbName]);
+    if (onFilterZona) onFilterZona(urbName);
+  };
+
+  const selectAllFiltered = () => {
+    const allNames = filteredUrbanizaciones.map((u) => u.nombre);
+    if (allNames.length > 0) {
+      setSelectedUrbs(allNames);
+    }
+  };
+
+  // 2. Registros filtrados sumando los lugares agrupados
   const recordsInScope = useMemo(() => {
     return records.filter((r) => {
       const urb = getUrbanizacion(r);
-      const matchUrb = !activeUrb || urb === activeUrb;
+      const matchUrb = activeUrbsList.length === 0 || activeUrbsList.includes(urb);
       const turno = getTurno(r);
       const matchTurno = selectedTurno === 'TODOS' || turno === selectedTurno;
       return matchUrb && matchTurno;
     });
-  }, [records, activeUrb, selectedTurno]);
+  }, [records, activeUrbsList, selectedTurno]);
 
-  // 3. Telemetría y Métricas HUD
+  // 3. Telemetría HUD
   const hudData = useMemo(() => {
     const total = recordsInScope.length;
     const vehiculos: Record<string, number> = {};
@@ -164,16 +234,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       pct: Math.round((casos / maxFlota) * 100)
     }));
 
-    // Puntos de calor dinámicos en el radar topográfico según los datos
-    const hotspotCount = Math.min(Math.max(total, 3), 14);
-    const hotspots = Array.from({ length: hotspotCount }).map((_, i) => {
-      const seed = (activeUrb.charCodeAt(i % activeUrb.length) || 65) + i * 37;
-      const x = 110 + (seed % 260);
-      const y = 55 + ((seed * 19) % 105);
-      const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
-      return { x, y, color, id: i };
-    });
-
     return {
       total,
       unidadesActivasCount,
@@ -186,12 +246,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       pctManana,
       pctTarde,
       pctNoche,
-      flotaList,
-      hotspots
+      flotaList
     };
-  }, [recordsInScope, activeUrb]);
+  }, [recordsInScope]);
 
-  // 4. Matriz de Frecuencia de Incidencias
+  // 4. Matriz de Frecuencia
   const frecuenciaModalidades = useMemo(() => {
     const counts: Record<string, number> = {};
     recordsInScope.forEach((r) => {
@@ -207,13 +266,143 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         porcentaje: Number(((count / total) * 100).toFixed(1))
       }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 7);
+      .slice(0, 8);
   }, [recordsInScope]);
 
-  const handleUrbClick = (urb: string) => {
-    setSelectedUrb(urb);
-    if (onFilterZona) onFilterZona(urb);
-  };
+  // 5. Inicialización de API MapLibre GL JS 3D (Edificios Extruidos + Modo Oscuro Táctico)
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMapLibre = async () => {
+      if (!document.getElementById('maplibre-gl-css')) {
+        const link = document.createElement('link');
+        link.id = 'maplibre-gl-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+        document.head.appendChild(link);
+      }
+
+      if (!(window as any).maplibregl) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('No se pudo cargar MapLibre GL'));
+          document.head.appendChild(script);
+        });
+      }
+
+      if (!isMounted || !mapContainerRef.current || mapInstanceRef.current) return;
+      const maplibregl = (window as any).maplibregl;
+      const center = getSectorCenter(activeTitle);
+
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center,
+        zoom: 15.4,
+        pitch: 62,
+        bearing: -24,
+        antialias: true
+      });
+
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+      map.on('load', () => {
+        if (!isMounted) return;
+        // Agregar fuente vectorial de OpenFreeMap para edificios 3D reales
+        if (!map.getSource('openmaptiles-3d')) {
+          map.addSource('openmaptiles-3d', {
+            type: 'vector',
+            url: 'https://tiles.openfreemap.org/planet'
+          });
+
+          map.addLayer({
+            id: '3d-buildings-hud',
+            source: 'openmaptiles-3d',
+            'source-layer': 'building',
+            type: 'fill-extrusion',
+            minzoom: 14,
+            paint: {
+              'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'render_height'],
+                0,
+                '#082f49',
+                20,
+                '#0e7490',
+                50,
+                '#22d3ee'
+              ],
+              'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
+              'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+              'fill-extrusion-opacity': 0.72
+            }
+          });
+        }
+        setMapReady(true);
+      });
+
+      mapInstanceRef.current = map;
+    };
+
+    loadMapLibre().catch((err) => console.warn('Aviso cargando mapa 3D:', err));
+
+    return () => {
+      isMounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // 6. Actualizar vuelo 3D y puntos de calor pulsantes cuando cambia el sector o los datos
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const maplibregl = (window as any).maplibregl;
+    if (!map || !maplibregl) return;
+
+    const [lng, lat] = getSectorCenter(activeTitle);
+    map.flyTo({
+      center: [lng, lat],
+      zoom: 15.6,
+      pitch: 62,
+      bearing: -24,
+      speed: 1.4
+    });
+
+    // Limpiar marcadores previos
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    // Crear puntos de calor y etiquetas tácticas sobre las manzanas del sector
+    const count = Math.min(Math.max(recordsInScope.length, 3), 12);
+    for (let i = 0; i < count; i++) {
+      const r: any = recordsInScope[i] || {};
+      const parsedLat = parseFloat(r.lat || r.latitud);
+      const parsedLng = parseFloat(r.lng || r.longitud);
+
+      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * 0.0028;
+      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * 0.0022;
+
+      const el = document.createElement('div');
+      const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
+      el.innerHTML = `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;">
+          <span style="position:absolute;width:22px;height:22px;border-radius:9999px;background:${color};opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>
+          <span style="width:9px;height:9px;border-radius:9999px;background:${color};box-shadow:0 0 10px ${color};border:1.5px solid #fff;"></span>
+        </div>
+      `;
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([offsetLng, offsetLat])
+        .addTo(map);
+      markersRef.current.push(marker);
+    }
+  }, [activeTitle, recordsInScope, mapReady]);
 
   const handleTurnoClick = (turno: string) => {
     const next = selectedTurno === turno ? 'TODOS' : turno;
@@ -221,128 +410,187 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (onFilterTurno) onFilterTurno(next);
   };
 
-  // Arcos concéntricos para panel derecho
   const c1 = 2 * Math.PI * 44;
   const c2 = 2 * Math.PI * 33;
   const c3 = 2 * Math.PI * 22;
 
   return (
-    <div className="min-h-screen bg-[#030914] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      {/* Fondo Atmosférico Holográfico */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(6,182,212,0.16),transparent_65%)] pointer-events-none" />
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(14,165,233,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(14,165,233,0.07)_1px,transparent_1px)] bg-[size:2.5rem_2.5rem] pointer-events-none" />
+    <div className="min-h-screen bg-[#020710] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
+      {/* Iluminación Volumétrica Holográfica */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(6,182,212,0.22),transparent_60%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.06)_1px,transparent_1px)] bg-[size:2.2rem_2.2rem] pointer-events-none" />
 
-      {/* MARCO PRINCIPAL DE PANTALLA HOLOGRÁFICA */}
-      <div className="relative z-10 max-w-[1680px] mx-auto border-2 border-cyan-500/40 rounded-2xl bg-[#051022]/85 backdrop-blur-xl shadow-[0_0_50px_rgba(6,182,212,0.2),inset_0_0_40px_rgba(6,182,212,0.08)] p-3 sm:p-4">
-        {/* Esquinas luminosas exteriores */}
-        <div className="absolute -top-[2px] -left-[2px] w-8 h-8 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none" />
-        <div className="absolute -top-[2px] -right-[2px] w-8 h-8 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none" />
-        <div className="absolute -bottom-[2px] -left-[2px] w-8 h-8 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
-        <div className="absolute -bottom-[2px] -right-[2px] w-8 h-8 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
+      {/* CHASIS PRINCIPAL HOLOGRÁFICO */}
+      <div className="relative z-10 max-w-[1720px] mx-auto border border-cyan-400/50 rounded-2xl bg-[#040d1c]/90 backdrop-blur-2xl shadow-[0_0_60px_rgba(6,182,212,0.25),inset_0_0_50px_rgba(6,182,212,0.08)] p-3 sm:p-4">
+        <div className="absolute -top-[2px] -left-[2px] w-10 h-10 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_15px_rgba(34,211,238,0.6)]" />
+        <div className="absolute -top-[2px] -right-[2px] w-10 h-10 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_15px_rgba(34,211,238,0.6)]" />
+        <div className="absolute -bottom-[2px] -left-[2px] w-10 h-10 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
+        <div className="absolute -bottom-[2px] -right-[2px] w-10 h-10 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER SUPERIOR TIPO VISOR DE MANDO */}
+        {/* HEADER SUPERIOR TÁCTICO */}
         <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/30">
-          {/* Izquierda: Escudo + Telemetría */}
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-xl bg-cyan-950/90 border border-cyan-400/70 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] shrink-0">
-              <Shield className="w-7 h-7 text-cyan-300" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-900/50 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.5)] shrink-0">
+              <Shield className="w-7 h-7 text-cyan-200" />
             </div>
-            <div className="border border-cyan-500/30 bg-[#071830]/90 rounded-lg px-3 py-1.5 flex items-center gap-4">
+            <div className="border border-cyan-400/40 bg-[#06162d]/90 rounded-lg px-3 py-1.5 flex items-center gap-4 shadow-[inset_0_0_15px_rgba(6,182,212,0.15)]">
               <div>
                 <span className="text-[9px] font-mono text-cyan-400 tracking-widest block">TELEMETRÍA</span>
                 <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">
                   <Wifi className="w-3 h-3 animate-pulse" /> {records.length.toLocaleString()} REG
                 </span>
               </div>
-              <Settings className="w-5 h-5 text-cyan-400/80 animate-spin" style={{ animationDuration: '14s' }} />
+              <Settings className="w-5 h-5 text-cyan-300 animate-spin" style={{ animationDuration: '12s' }} />
             </div>
           </div>
 
-          {/* Centro: Banner Título Principal Brillante */}
-          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950/90 via-cyan-800/40 to-cyan-950/90 border border-cyan-400/60 rounded-xl px-5 py-2.5 text-center shadow-[0_0_25px_rgba(6,182,212,0.3)] relative">
-            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.12em] text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-700/30 to-cyan-950 border-y-2 border-x border-cyan-400/80 rounded-xl px-5 py-2.5 text-center shadow-[0_0_30px_rgba(6,182,212,0.35)]">
+            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]">
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
             </h1>
-            <div className="flex items-center justify-center gap-4 text-[10px] font-mono text-cyan-300/80 mt-0.5">
-              <span>SECTOR: {activeUrb}</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
+              <span className="bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-400/40">
+                OBJETIVO: {activeTitle}
+              </span>
               <span>•</span>
               <span>TURNO: {selectedTurno}</span>
             </div>
           </div>
 
-          {/* Derecha: Cyber-Encryption & Print */}
           <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-            <div className="hidden sm:flex items-center gap-2 border border-cyan-500/30 bg-[#071830]/90 rounded-lg px-3 py-1.5">
+            <div className="hidden sm:flex items-center gap-2 border border-cyan-400/40 bg-[#06162d]/90 rounded-lg px-3 py-1.5">
               <Lock className="w-4 h-4 text-emerald-400" />
               <div className="text-[9px] font-mono leading-tight">
-                <span className="text-cyan-400 block">CYBER-ENCRYPTION</span>
-                <span className="text-emerald-300 font-bold">SUPABASE SSL</span>
+                <span className="text-cyan-400 block">ENLACE SEGURO</span>
+                <span className="text-emerald-300 font-bold">SUPABASE LIVE</span>
               </div>
             </div>
 
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400 rounded-lg text-cyan-200 text-xs font-mono font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(6,182,212,0.35)] cursor-pointer transition"
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/30 to-emerald-500/30 hover:from-cyan-400/40 hover:to-emerald-400/40 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
             >
-              <Printer className="w-4 h-4" />
-              <span>FICHA VECINAL</span>
+              <Printer className="w-4 h-4 text-cyan-200" />
+              <span>EXPORTAR FICHA</span>
             </button>
           </div>
         </header>
 
-        {/* ESTRUCTURA DE 3 COLUMNAS EXACTA COMO LA SALA DE MANDO */}
+        {/* GRID PRINCIPAL DE 3 COLUMNAS */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* ================= COLUMNA 1: SECTORIZACIÓN / OPERATIVO (3 COLS) ================= */}
+          {/* ================= COLUMNA 1: SECTORIZACIÓN MULTI-SELECCIÓN (3 COLS) ================= */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            {/* Panel Lista de Sectores */}
-            <div className="border border-cyan-500/40 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)] relative">
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase">
-                  SECTORIZACIÓN / OPERATIVO
+            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)] relative">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  SECTORIZACIÓN / AGRUPAR
                 </h2>
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-500/30">
-                  {filteredUrbanizaciones.length}
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
+                  {activeUrbsList.length} MARCADO{activeUrbsList.length > 1 ? 'S' : ''}
                 </span>
               </div>
 
               {/* Buscador HUD */}
-              <div className="relative mb-2.5">
-                <Search className="w-3.5 h-3.5 text-cyan-400 absolute left-2.5 top-2.5" />
+              <div className="relative mb-2">
+                <Search className="w-3.5 h-3.5 text-cyan-300 absolute left-2.5 top-2.5" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar urbanización..."
-                  className="w-full bg-[#030b17] border border-cyan-500/40 focus:border-cyan-300 rounded-lg pl-8 pr-2.5 py-1.5 text-xs font-mono text-cyan-100 placeholder-cyan-700 focus:outline-none"
+                  placeholder="Ej: CASUARINAS, BRISAS..."
+                  className="w-full bg-[#020813] border border-cyan-400/50 focus:border-emerald-400 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-white placeholder-cyan-700 focus:outline-none shadow-[inset_0_0_10px_rgba(6,182,212,0.15)]"
                 />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-2 text-cyan-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              {/* Botones iluminados de urbanizaciones */}
-              <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
-                {filteredUrbanizaciones.map((urb) => {
-                  const isActive = activeUrb === urb.nombre;
-                  return (
+              {searchTerm.trim() !== '' && filteredUrbanizaciones.length > 1 && (
+                <button
+                  onClick={selectAllFiltered}
+                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/40 to-cyan-600/40 hover:from-emerald-500/50 hover:to-cyan-500/50 border border-emerald-400 text-[10px] font-mono font-black text-emerald-200 uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer transition"
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  AGRUPAR TODOS LOS "{searchTerm.toUpperCase()}" ({filteredUrbanizaciones.length})
+                </button>
+              )}
+
+              {activeUrbsList.length > 1 && (
+                <div className="mb-2 p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/40">
+                  <div className="flex items-center justify-between text-[9px] font-mono text-cyan-300 mb-1">
+                    <span>SECTORES UNIFICADOS EN REPORTE:</span>
                     <button
+                      onClick={() => selectSingleUrb(activeUrbsList[0])}
+                      className="text-amber-300 underline cursor-pointer"
+                    >
+                      LIMPIAR
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1 max-h-14 overflow-y-auto">
+                    {activeUrbsList.map((name) => (
+                      <span
+                        key={name}
+                        onClick={() => toggleUrbSelection(name)}
+                        className="text-[9px] font-mono bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 px-1.5 py-0.5 rounded cursor-pointer hover:bg-rose-500/30 hover:border-rose-400"
+                        title="Clic para quitar del grupo"
+                      >
+                        {name} ×
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+                {filteredUrbanizaciones.map((urb) => {
+                  const isChecked = activeUrbsList.includes(urb.nombre);
+                  return (
+                    <div
                       key={urb.nombre}
-                      onClick={() => handleUrbClick(urb.nombre)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono flex items-center justify-between transition-all cursor-pointer border ${
-                        isActive
-                          ? 'bg-gradient-to-r from-emerald-500/30 via-cyan-500/30 to-cyan-900/40 border-emerald-400 text-white font-black shadow-[0_0_18px_rgba(16,185,129,0.45)]'
-                          : 'bg-[#081b33]/70 border-cyan-500/20 text-cyan-200/80 hover:border-cyan-400/60 hover:text-white'
+                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between transition-all border ${
+                        isChecked
+                          ? 'bg-gradient-to-r from-emerald-500/30 via-cyan-500/25 to-blue-900/40 border-emerald-400 text-white font-black shadow-[0_0_18px_rgba(16,185,129,0.4)]'
+                          : 'bg-[#071930]/80 border-cyan-500/25 text-cyan-200/80 hover:border-cyan-400/70 hover:text-white'
                       }`}
                     >
-                      <span className="truncate pr-2">{urb.nombre}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${isActive ? 'bg-emerald-400 text-slate-950 font-black' : 'bg-slate-950/80 text-cyan-400'}`}>
+                      <button
+                        onClick={() => toggleUrbSelection(urb.nombre)}
+                        className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                        title="Marcar / Desmarcar para agrupar"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-300 shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-cyan-500/70 shrink-0" />
+                        )}
+                        <span className="truncate pr-1">{urb.nombre}</span>
+                      </button>
+
+                      <button
+                        onClick={() => selectSingleUrb(urb.nombre)}
+                        title="Ver solo este sector"
+                        className={`text-[10px] px-2 py-0.5 rounded cursor-pointer shrink-0 ${
+                          isChecked
+                            ? 'bg-emerald-400 text-slate-950 font-black'
+                            : 'bg-slate-950 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500 hover:text-slate-950'
+                        }`}
+                      >
                         {urb.count}
-                      </span>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Panel Rango de Turnos con 3 Diales Circulares */}
-            <div className="border border-cyan-500/40 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)]">
+            {/* Rango de Turnos con 3 Diales Holográficos */}
+            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase">
                   RANGO DE TURNOS
@@ -350,9 +598,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 {selectedTurno !== 'TODOS' && (
                   <button
                     onClick={() => handleTurnoClick(selectedTurno)}
-                    className="text-[10px] font-mono text-amber-400 underline cursor-pointer"
+                    className="text-[10px] font-mono text-amber-300 underline cursor-pointer"
                   >
-                    VER TODOS
+                    TODOS
                   </button>
                 )}
               </div>
@@ -360,7 +608,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
                   { label: 'MAÑANA', pct: hudData.pctManana, color: '#10b981' },
-                  { label: 'TARDE', pct: hudData.pctTarde, color: '#06b6d4' },
+                  { label: 'TARDE', pct: hudData.pctTarde, color: '#22d3ee' },
                   { label: 'NOCHE', pct: hudData.pctNoche, color: '#ec4899' }
                 ].map((t) => {
                   const active = selectedTurno === t.label;
@@ -373,14 +621,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       onClick={() => handleTurnoClick(t.label)}
                       className={`p-2 rounded-xl border transition-all cursor-pointer flex flex-col items-center ${
                         active
-                          ? 'bg-cyan-500/20 border-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                          : 'bg-[#040e1c] border-cyan-500/20 hover:border-cyan-500/50'
+                          ? 'bg-cyan-500/25 border-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.5)]'
+                          : 'bg-[#030b17] border-cyan-500/25 hover:border-cyan-400/60'
                       }`}
                     >
                       <div className="relative w-12 h-12 flex items-center justify-center">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                          <circle cx="24" cy="24" r={r} stroke="#0f2942" strokeWidth="4" fill="transparent" />
-                          <circle cx="24" cy="24" r="13" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.4" fill="transparent" />
+                          <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="4" fill="transparent" />
+                          <circle cx="24" cy="24" r="13" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.5" fill="transparent" />
                           <circle
                             cx="24"
                             cy="24"
@@ -393,23 +641,23 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                             fill="transparent"
                           />
                         </svg>
-                        <span className="absolute text-[10px] font-mono font-bold text-white">
+                        <span className="absolute text-[10px] font-mono font-black text-white">
                           {t.pct}%
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-cyan-200 mt-1">{t.label}</span>
+                      <span className="text-[10px] font-mono text-cyan-100 mt-1">{t.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Panel Sliders Tácticos de Filtro de Densidad */}
-            <div className="border border-cyan-500/40 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)] space-y-3">
+            {/* Sliders Tácticos */}
+            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] space-y-2.5">
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-cyan-300 mb-1">
-                  <span>UMBRAL MÍNIMO DE CASOS</span>
-                  <span className="text-emerald-400 font-bold">{minCasosFilter}+ EVENTOS</span>
+                  <span>FILTRO DENSIDAD MÍNIMA</span>
+                  <span className="text-emerald-300 font-bold">{minCasosFilter}+ CASOS</span>
                 </div>
                 <input
                   type="range"
@@ -423,95 +671,90 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
 
               <div className="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px] font-mono text-cyan-400">
-                <span>AGENTE LÍDER EN ZONA:</span>
-                <span className="text-white font-bold truncate max-w-[150px]">{hudData.topAgente}</span>
+                <span>AGENTE LÍDER:</span>
+                <span className="text-white font-bold truncate max-w-[155px]">{hudData.topAgente}</span>
               </div>
             </div>
           </aside>
 
           {/* ================= COLUMNA 2: NÚCLEO TÁCTICO CENTRAL (6 COLS) ================= */}
           <main className="lg:col-span-6 flex flex-col gap-4">
-            {/* FILA SUPERIOR: 4 TARJETAS HUD CON GRÁFICOS INTERNOS */}
+            {/* 4 TARJETAS HUD SUPERIORES */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Tarjeta 1: Total Incidencias + Ondas de Pulso */}
-              <div className="border border-cyan-400/50 bg-[#06162b]/90 rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.12)]">
+              {/* Total Incidencias */}
+              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
                 <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block">
                   TOTAL INCIDENCIAS
                 </span>
-                <span className="text-[9px] font-mono text-cyan-400/80 block truncate">
-                  ({activeUrb})
+                <span className="text-[9px] font-mono text-emerald-300 block truncate">
+                  {activeUrbsList.length > 1 ? `${activeUrbsList.length} SECTORES AGRUPADOS` : activeTitle}
                 </span>
                 <div className="my-1 relative flex items-center justify-center">
-                  {/* Onda de pulso SVG */}
                   <svg className="w-full h-11" viewBox="0 0 140 44">
                     <path
-                      d="M0,22 L25,22 L32,12 L38,32 L44,6 L50,38 L56,14 L62,28 L68,22 L140,22"
+                      d="M0,22 L25,22 L32,10 L38,34 L44,4 L50,40 L56,12 L62,30 L68,22 L140,22"
                       fill="none"
                       stroke="#ec4899"
-                      strokeWidth="1.5"
-                      strokeOpacity="0.6"
+                      strokeWidth="1.8"
                     />
                     <path
-                      d="M0,22 L75,22 L82,10 L88,34 L94,8 L100,36 L106,16 L112,26 L118,22 L140,22"
+                      d="M0,22 L75,22 L82,8 L88,36 L94,6 L100,38 L106,14 L112,28 L118,22 L140,22"
                       fill="none"
                       stroke="#f59e0b"
-                      strokeWidth="1.5"
-                      strokeOpacity="0.7"
+                      strokeWidth="1.8"
                     />
                   </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] bg-[#06162b]/80 px-2 rounded">
-                    {hudData.total}
+                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.9)] bg-[#06162b]/90 px-2 rounded">
+                    {hudData.total.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              {/* Tarjeta 2: Patrullaje Activo + Anillo */}
-              <div className="border border-cyan-400/50 bg-[#06162b]/90 rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.12)]">
+              {/* Patrullaje Activo */}
+              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
                 <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block mb-1">
                   PATRULLAJE ACTIVO
                 </span>
                 <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-11 h-11 rounded-full border-2 border-cyan-400 flex flex-col items-center justify-center shadow-[0_0_12px_rgba(34,211,238,0.5)]">
+                  <div className="w-11 h-11 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
                     <span className="text-sm font-black font-mono text-white leading-none">
                       {hudData.unidadesActivasCount}
                     </span>
                     <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
                   </div>
-                  {/* Radar mini */}
-                  <div className="w-11 h-11 rounded-full border border-dashed border-emerald-400/70 flex items-center justify-center bg-emerald-950/30">
+                  <div className="w-11 h-11 rounded-full border border-dashed border-emerald-400 flex items-center justify-center bg-emerald-950/40">
                     <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
                   </div>
                 </div>
               </div>
 
-              {/* Tarjeta 3: Móvil en Operación + Camioneta Wireframe SVG */}
-              <div className="border border-cyan-400/50 bg-[#06162b]/90 rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.12)]">
+              {/* Móvil en Operación */}
+              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
                 <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block">
                   MÓVIL EN OPERACIÓN
                 </span>
-                <div className="text-sm sm:text-base font-black font-mono text-cyan-300 truncate mt-0.5 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+                <div className="text-sm sm:text-base font-black font-mono text-cyan-200 truncate mt-0.5 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
                   {hudData.topVehiculo}
                 </div>
-                {/* Silueta Wireframe Patrullero 4x4 */}
                 <svg className="w-24 h-8 mx-auto mt-1" viewBox="0 0 120 40">
                   <path
                     d="M15,26 L22,14 L52,12 L75,12 L95,18 L108,20 L108,28 L15,28 Z"
-                    fill="rgba(6,182,212,0.18)"
-                    stroke="#22d3ee"
-                    strokeWidth="1.5"
+                    fill="rgba(34,211,238,0.25)"
+                    stroke="#67e8f9"
+                    strokeWidth="1.6"
                   />
                   <rect x="48" y="8" width="12" height="3" fill="#ec4899" />
-                  <circle cx="33" cy="29" r="6" fill="#030914" stroke="#22d3ee" strokeWidth="2" />
-                  <circle cx="90" cy="29" r="6" fill="#030914" stroke="#22d3ee" strokeWidth="2" />
+                  <circle cx="33" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
+                  <circle cx="90" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
                 </svg>
               </div>
 
-              {/* Tarjeta 4: Concentración Horaria */}
-              <div className="border border-cyan-400/50 bg-[#06162b]/90 rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.12)]">
+              {/* Turno Crítico */}
+              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
                 <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block mb-1">
                   TURNO CRÍTICO
                 </span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-400 bg-cyan-950/60 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.5)]">
                   <span className="text-xs font-black font-mono text-white">
                     {hudData.topTurnoPct}%
                   </span>
@@ -520,278 +763,22 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* PANEL CENTRAL: MAPA TOPOGRÁFICO ISOMÉTRICO 3D INTERACTIVO */}
-            <div className="border border-cyan-400/50 bg-[#040f1e] rounded-xl p-3.5 relative overflow-hidden shadow-[inset_0_0_35px_rgba(6,182,212,0.15)]">
-              <div className="flex items-center justify-between mb-1 relative z-10">
-                <span className="text-xs font-mono font-black tracking-widest text-cyan-200 uppercase flex items-center gap-2">
-                  <Crosshair className="w-4 h-4 text-cyan-400" />
-                  SECTOR {activeUrb}
+            {/* MAPA REAL 3D INTERACTIVO (API MAPLIBRE GL JS + OPENFREEMAP EDIFICIOS 3D) */}
+            <div className="border border-cyan-400/70 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+              <div className="flex items-center justify-between mb-1.5 px-1 relative z-10">
+                <span className="text-xs font-mono font-black tracking-widest text-cyan-100 uppercase flex items-center gap-2 truncate pr-2">
+                  <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
+                  {activeTitle}
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded">
-                  RADAR TOPOGRÁFICO 3D // ACTIVO
-                </span>
-              </div>
-
-              {/* SVG Topográfico Isométrico con Manzanas, Sonar y Puntos de Calor */}
-              <div className="w-full h-52 sm:h-60 relative flex items-center justify-center">
-                <svg className="w-full h-full" viewBox="0 0 480 220" preserveAspectRatio="xMidYMid slice">
-                  <defs>
-                    <linearGradient id="topoGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#082f49" stopOpacity="0.8" />
-                      <stop offset="50%" stopColor="#0e7490" stopOpacity="0.45" />
-                      <stop offset="100%" stopColor="#040f1e" stopOpacity="0.9" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Plano Isométrico Base */}
-                  <polygon
-                    points="240,18 455,105 240,198 25,105"
-                    fill="url(#topoGrad)"
-                    stroke="#22d3ee"
-                    strokeWidth="1.5"
-                    strokeOpacity="0.7"
-                  />
-
-                  {/* Líneas de cuadrícula urbana isométrica */}
-                  {[0.2, 0.4, 0.6, 0.8].map((t, idx) => (
-                    <g key={idx} stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="1">
-                      <line
-                        x1={240 - 215 * t}
-                        y1={18 + 87 * t}
-                        x2={455 - 215 * t}
-                        y2={105 + 93 * t}
-                      />
-                      <line
-                        x1={240 + 215 * t}
-                        y1={18 + 87 * t}
-                        x2={25 + 215 * t}
-                        y2={105 + 93 * t}
-                      />
-                    </g>
-                  ))}
-
-                  {/* Bloques 3D simulando manzanas urbanas */}
-                  <polygon points="210,75 235,65 260,75 235,85" fill="#164e63" stroke="#38bdf8" strokeWidth="0.8" />
-                  <polygon points="265,95 295,83 325,95 295,107" fill="#155e75" stroke="#38bdf8" strokeWidth="0.8" />
-                  <polygon points="155,100 185,88 215,100 185,112" fill="#164e63" stroke="#38bdf8" strokeWidth="0.8" />
-                  <polygon points="215,125 245,113 275,125 245,137" fill="#0e7490" stroke="#67e8f9" strokeWidth="0.9" />
-
-                  {/* Ondas de Sonar Concéntricas */}
-                  <ellipse cx="235" cy="112" rx="75" ry="32" fill="none" stroke="#22d3ee" strokeWidth="1" strokeDasharray="4 4" />
-                  <ellipse cx="235" cy="112" rx="42" ry="18" fill="none" stroke="#f43f5e" strokeWidth="1.2" />
-
-                  {/* Puntos de Calor Dinámicos según incidencias del sector */}
-                  {hudData.hotspots.map((pt) => (
-                    <g key={pt.id}>
-                      <circle cx={pt.x} cy={pt.y} r="7" fill={pt.color} fillOpacity="0.25" />
-                      <circle cx={pt.x} cy={pt.y} r="3" fill={pt.color} />
-                    </g>
-                  ))}
-
-                  {/* Etiquetas Flotantes de Unidades Móviles */}
-                  <g transform="translate(285, 58)">
-                    <rect x="0" y="0" width="66" height="16" rx="3" fill="#051326" stroke="#22d3ee" strokeWidth="1" />
-                    <text x="33" y="11" textAnchor="middle" fill="#67e8f9" fontSize="8" fontFamily="monospace" fontWeight="bold">
-                      {hudData.topVehiculo.slice(0, 10)}
-                    </text>
-                  </g>
-
-                  <g transform="translate(135, 132)">
-                    <rect x="0" y="0" width="62" height="16" rx="3" fill="#051326" stroke="#ec4899" strokeWidth="1" />
-                    <text x="31" y="11" textAnchor="middle" fill="#f472b6" fontSize="8" fontFamily="monospace" fontWeight="bold">
-                      ALERTA C2
-                    </text>
-                  </g>
-                </svg>
-
-                {/* Mini Brújula / Coordenadas inferior izquierda */}
-                <div className="absolute bottom-1 left-1 border border-cyan-500/40 bg-[#051224]/90 rounded p-1.5 text-[9px] font-mono text-cyan-400">
-                  <div>LAT: -9.1245° S</div>
-                  <div>LON: -78.5312° W</div>
-                </div>
-              </div>
-            </div>
-
-            {/* PANEL INFERIOR: MATRIZ DE FRECUENCIA DE INCIDENCIAS */}
-            <div className="border border-cyan-400/50 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)]">
-              <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">
-                  MATRIZ DE FRECUENCIA DE INCIDENCIAS
-                </h3>
-                <span className="text-[10px] font-mono text-cyan-400">
-                  DESGLOSE MODALIDAD // {hudData.total} CASOS
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/90 border border-emerald-400/50 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
+                  <Compass className="w-3 h-3 text-emerald-400" />
+                  MAPA 3D SATELITAL // NUEVO CHIMBOTE
                 </span>
               </div>
 
-              <div className="space-y-2 max-h-[195px] overflow-y-auto pr-1">
-                {frecuenciaModalidades.length === 0 ? (
-                  <div className="text-center py-6 text-xs font-mono text-cyan-500">
-                    SIN INCIDENCIAS EN ESTE FILTRO
-                  </div>
-                ) : (
-                  frecuenciaModalidades.map((item, idx) => (
-                    <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
-                      <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-cyan-100 truncate">
-                        {item.modalidad}
-                      </span>
-                      <div className="col-span-5 sm:col-span-6 bg-[#030b17] h-3 rounded-sm border border-cyan-500/30 p-0.5 overflow-hidden">
-                        <div
-                          className={`h-full rounded-xs transition-all duration-700 ${
-                            idx === 0
-                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500 shadow-[0_0_10px_#f43f5e]'
-                              : idx === 1
-                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400 shadow-[0_0_10px_#f59e0b]'
-                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 shadow-[0_0_8px_#22d3ee]'
-                          }`}
-                          style={{ width: `${Math.max(item.porcentaje, 5)}%` }}
-                        />
-                      </div>
-                      <span className="col-span-2 text-right font-mono text-[11px] font-bold text-cyan-300">
-                        {item.count} ({item.porcentaje}%)
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </main>
+              {/* Contenedor del Mapa 3D Real */}
+              <div className="w-full h-56 sm:h-64 rounded-lg overflow-hidden border border-cyan-500/40 relative">
+                <div ref={mapContainerRef} className="w-full h-full" />
 
-          {/* ================= COLUMNA 3: INCIDENTES POR RECURSO Y ONDA (3 COLS) ================= */}
-          <aside className="lg:col-span-3 flex flex-col gap-4">
-            {/* Anillo Concéntrico Multi-Arco HUD */}
-            <div className="border border-cyan-500/40 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)] flex flex-col items-center">
-              <h3 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase w-full text-left mb-2">
-                INCIDENTES POR RECURSO
-              </h3>
-
-              <div className="relative w-44 h-44 flex items-center justify-center my-1">
-                <svg className="w-44 h-44 -rotate-90" viewBox="0 0 110 110">
-                  {/* Pistas de fondo */}
-                  <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
-                  <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
-                  <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
-
-                  {/* Arco Exterior Cian (Mañana) */}
-                  <circle
-                    cx="55"
-                    cy="55"
-                    r="44"
-                    stroke="#22d3ee"
-                    strokeWidth="7"
-                    strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="drop-shadow-[0_0_6px_#22d3ee]"
-                  />
-                  {/* Arco Medio Naranja (Tarde) */}
-                  <circle
-                    cx="55"
-                    cy="55"
-                    r="33"
-                    stroke="#f97316"
-                    strokeWidth="6"
-                    strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="drop-shadow-[0_0_6px_#f97316]"
-                  />
-                  {/* Arco Interior Esmeralda (Noche) */}
-                  <circle
-                    cx="55"
-                    cy="55"
-                    r="22"
-                    stroke="#10b981"
-                    strokeWidth="5"
-                    strokeDasharray={`${(hudData.pctNoche / 100) * c3} ${c3}`}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
-                </svg>
-
-                <div className="absolute text-center">
-                  <span className="text-lg font-black font-mono text-white block leading-none">
-                    {hudData.total}
-                  </span>
-                  <span className="text-[8px] font-mono text-cyan-400">EVENTOS</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-1 w-full text-center font-mono text-[10px] mt-1">
-                <div className="bg-[#040e1c] p-1 rounded border border-cyan-500/20">
-                  <span className="text-cyan-400 block">MAÑ</span>
-                  <span className="font-bold text-white">{hudData.turnosCount.MAÑANA}</span>
-                </div>
-                <div className="bg-[#040e1c] p-1 rounded border border-orange-500/20">
-                  <span className="text-orange-400 block">TAR</span>
-                  <span className="font-bold text-white">{hudData.turnosCount.TARDE}</span>
-                </div>
-                <div className="bg-[#040e1c] p-1 rounded border border-emerald-500/20">
-                  <span className="text-emerald-400 block">NOC</span>
-                  <span className="font-bold text-white">{hudData.turnosCount.NOCHE}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Despliegue por Unidad: Onda Luminosa + Barras */}
-            <div className="border border-cyan-500/40 bg-[#061529]/90 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.08)] flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase mb-2">
-                  DESPLIEGUE POR UNIDAD
-                </h3>
-
-                {/* Gráfico de Onda Sinusoidal Luminosa */}
-                <div className="bg-[#030b17] border border-cyan-500/30 rounded-lg p-2 mb-3">
-                  <svg className="w-full h-16" viewBox="0 0 220 60">
-                    <defs>
-                      <linearGradient id="waveFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z"
-                      fill="url(#waveFill)"
-                    />
-                    <path
-                      d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25"
-                      fill="none"
-                      stroke="#34d399"
-                      strokeWidth="2"
-                      className="drop-shadow-[0_0_6px_#34d399]"
-                    />
-                  </svg>
-                </div>
-
-                {/* Lista de Unidades Móviles */}
-                <div className="space-y-2.5">
-                  {hudData.flotaList.map((item, i) => (
-                    <div key={item.unidad} className="space-y-1">
-                      <div className="flex justify-between text-[11px] font-mono">
-                        <span className="text-cyan-100 truncate pr-2">{item.unidad}</span>
-                        <span className="text-emerald-300 font-bold shrink-0">{item.casos}</span>
-                      </div>
-                      <div className="w-full bg-[#030b17] h-2 rounded-full overflow-hidden border border-cyan-500/20">
-                        <div
-                          className={`h-full rounded-full ${
-                            i === 0
-                              ? 'bg-gradient-to-r from-cyan-400 to-emerald-400 shadow-[0_0_8px_#34d399]'
-                              : i === 1
-                              ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                              : 'bg-cyan-500'
-                          }`}
-                          style={{ width: `${Math.max(item.pct, 8)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AnalyticsDashboardView;
+                {/* Etiqueta HUD flotante sobre el mapa 3D */}
+                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/
