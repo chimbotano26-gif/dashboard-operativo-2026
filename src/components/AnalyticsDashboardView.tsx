@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Shield, Printer, Search, Lock, Crosshair,
-  Settings, Wifi, CheckSquare, Square, Layers, X, Compass, RotateCcw
+  Shield, Printer, Search, Crosshair,
+  Settings, Wifi, CheckSquare, Square, Layers, X, Compass, RotateCcw, Activity
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -71,11 +71,11 @@ const getSectorCenter = (title: string): [number, number] => {
 };
 
 const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
-  <div className={`relative flex items-center justify-center ${small ? 'w-12 h-8' : 'w-44 h-20 mx-auto'}`}>
+  <div className={`relative flex items-center justify-center ${small ? 'w-16 h-11' : 'w-48 h-24 mx-auto'}`}>
     <img
       src="/camioneta.png"
       alt="Patrullero 4x4"
-      className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]"
+      className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_16px_rgba(34,211,238,0.95)]"
     />
   </div>
 );
@@ -148,7 +148,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (allNames.length > 0) setSelectedUrbs(allNames);
   };
 
-  // Botón para borrar todos los filtros activos de un solo clic
   const handleResetAllFilters = () => {
     setSearchTerm('');
     setSelectedUrbs([]);
@@ -285,7 +284,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.on('load', () => {
-        // Aplicar inversión oscura cian de alto contraste directamente al canvas del mapa
         const canvas = map.getCanvas();
         if (canvas) {
           canvas.style.filter = 'invert(94%) hue-rotate(185deg) brightness(92%) contrast(140%) saturate(150%)';
@@ -342,33 +340,49 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const c2 = 2 * Math.PI * 33;
   const c3 = 2 * Math.PI * 22;
 
+  const waveBarsLeft = [14, 26, 38, 22, 44, 30, 18, 34, 24, 12];
+  const waveBarsRight = [12, 24, 36, 20, 44, 28, 16, 32, 22, 14];
+
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      {/* Iluminación Volumétrica Holográfica */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.3),transparent_65%)] pointer-events-none" />
       <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.08)_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
 
-      {/* CHASIS PRINCIPAL CON ESQUINAS LUMINOSAS */}
       <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/70 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_80px_rgba(6,182,212,0.35),inset_0_0_50px_rgba(6,182,212,0.12)] p-3 sm:p-4">
         <div className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_20px_rgba(34,211,238,0.8)]" />
         <div className="absolute -top-[2px] -right-[2px] w-12 h-12 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_20px_rgba(34,211,238,0.8)]" />
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER DE TELEMETRÍA */}
+        {/* HEADER CON TELEMETRÍA EXPANDIDA */}
         <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
-              <Shield className="w-7 h-7 text-cyan-200" />
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border-2 border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
+              <Shield className="w-8 h-8 text-cyan-200" />
             </div>
-            <div className="border border-cyan-400/50 bg-[#061830]/90 rounded-lg px-3 py-1.5 flex items-center gap-4">
+
+            {/* Panel de Telemetría lleno con barras de señal y doble engranaje */}
+            <div className="border border-cyan-400/60 bg-gradient-to-r from-[#061830] to-[#0a2547] rounded-xl px-4 py-2 flex items-center gap-4 shadow-[inset_0_0_20px_rgba(6,182,212,0.2)]">
               <div>
-                <span className="text-[9px] font-mono text-cyan-400 tracking-widest block">TELEMETRÍA</span>
-                <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">
-                  <Wifi className="w-3 h-3 animate-pulse" /> {records.length.toLocaleString()} REG
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-cyan-300 tracking-widest font-bold">TELEMETRÍA C2</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                </div>
+                <span className="text-base font-mono font-black text-emerald-300 flex items-center gap-1.5">
+                  <Wifi className="w-4 h-4 text-emerald-400" /> {records.length.toLocaleString()} REG
                 </span>
+                <div className="flex gap-1 mt-1">
+                  {[100, 85, 92, 70, 95, 80].map((w, i) => (
+                    <div key={i} className="w-4 h-1 bg-cyan-950 rounded-full overflow-hidden">
+                      <div className="h-full bg-cyan-400" style={{ width: `${w}%` }} />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <Settings className="w-5 h-5 text-cyan-300 animate-spin" style={{ animationDuration: '12s' }} />
+              <div className="flex items-center">
+                <Settings className="w-7 h-7 text-cyan-300 animate-spin" style={{ animationDuration: '10s' }} />
+                <Settings className="w-5 h-5 text-emerald-400 -ml-1.5 mt-3 animate-spin" style={{ animationDuration: '7s', animationDirection: 'reverse' }} />
+              </div>
             </div>
           </div>
 
@@ -377,7 +391,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
-              <span className="bg-cyan-500/25 px-2 py-0.5 rounded border border-cyan-300/50 font-bold">
+              <span className="bg-cyan-500/25 px-2.5 py-0.5 rounded border border-cyan-300/50 font-bold">
                 OBJETIVO: {activeTitle}
               </span>
               <span>•</span>
@@ -386,19 +400,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-            {/* BOTÓN PARA BORRAR TODOS LOS FILTROS */}
             <button
               onClick={handleResetAllFilters}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400 rounded-lg text-rose-200 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
-              title="Reiniciar búsqueda, sectores y turnos"
+              className="flex items-center gap-1.5 px-3.5 py-3 bg-rose-500/25 hover:bg-rose-500/40 border border-rose-400 rounded-xl text-rose-100 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-4 h-4" />
               <span>BORRAR FILTROS</span>
             </button>
 
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
+              className="flex items-center gap-1.5 px-4 py-3 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
             >
               <Printer className="w-4 h-4 text-cyan-200" />
               <span>FICHA</span>
@@ -410,7 +422,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           {/* COLUMNA IZQUIERDA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
             <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.15)]">
-              {/* Esquina superior magenta y esquina inferior verde neón como la imagen */}
               <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-4 border-l-4 border-fuchsia-400 rounded-tl-xl pointer-events-none" />
               <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl pointer-events-none" />
 
@@ -472,7 +483,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1.5 max-h-[245px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[235px] overflow-y-auto pr-1">
                 {filteredUrbanizaciones.map((urb) => {
                   const isChecked = activeUrbsList.includes(urb.nombre);
                   return (
@@ -502,8 +513,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Rango de Turnos con Diales Concéntricos Triples */}
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5">
+            {/* RANGO DE TURNOS CON ESFERAS SONAR GRANDES DE 76PX */}
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">RANGO DE TURNOS</h3>
                 {selectedTurno !== 'TODOS' && (
@@ -512,34 +523,35 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-3 gap-2.5 text-center">
                 {[
-                  { label: 'MAÑANA', pct: hudData.pctManana, color: '#10b981' },
-                  { label: 'TARDE', pct: hudData.pctTarde, color: '#22d3ee' },
-                  { label: 'NOCHE', pct: hudData.pctNoche, color: '#ec4899' }
+                  { label: 'MAÑANA', pct: hudData.pctManana, color: '#10b981', glow: 'rgba(16,185,129,0.45)' },
+                  { label: 'TARDE', pct: hudData.pctTarde, color: '#22d3ee', glow: 'rgba(34,211,238,0.45)' },
+                  { label: 'NOCHE', pct: hudData.pctNoche, color: '#ec4899', glow: 'rgba(236,72,153,0.45)' }
                 ].map((t) => {
                   const active = selectedTurno === t.label;
-                  const r = 20;
+                  const r = 30;
                   const circ = 2 * Math.PI * r;
                   const offset = circ - (t.pct / 100) * circ;
                   return (
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center transition ${
-                        active ? 'bg-cyan-500/30 border-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.55)]' : 'bg-[#030b17] border-cyan-500/30'
+                      className={`p-2.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition ${
+                        active ? 'bg-cyan-500/30 border-cyan-300' : 'bg-[#030b17] border-cyan-500/35 hover:border-cyan-400'
                       }`}
+                      style={{ boxShadow: active ? `0 0 22px ${t.glow}` : undefined }}
                     >
-                      <div className="relative w-12 h-12 flex items-center justify-center">
-                        <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                          <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="3.5" fill="transparent" />
-                          <circle cx="24" cy="24" r="14" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.55" fill="transparent" />
-                          <circle cx="24" cy="24" r="9" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.3" fill="transparent" />
-                          <circle cx="24" cy="24" r={r} stroke={t.color} strokeWidth="3.5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
+                      <div className="relative w-20 h-20 flex items-center justify-center">
+                        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 72 72">
+                          <circle cx="36" cy="36" r={r} stroke="#0c2238" strokeWidth="5" fill="transparent" />
+                          <circle cx="36" cy="36" r="22" stroke={t.color} strokeWidth="2" strokeOpacity="0.6" fill={t.color} fillOpacity="0.12" />
+                          <circle cx="36" cy="36" r="14" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.4" fill="transparent" />
+                          <circle cx="36" cy="36" r={r} stroke={t.color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
                         </svg>
-                        <span className="absolute text-[10px] font-mono font-black text-white">{t.pct}%</span>
+                        <span className="absolute text-sm font-mono font-black text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">{t.pct}%</span>
                       </div>
-                      <span className="text-[10px] font-mono text-cyan-100 mt-1">{t.label}</span>
+                      <span className="text-[11px] font-mono font-bold text-cyan-100 mt-1.5 tracking-wider">{t.label}</span>
                     </button>
                   );
                 })}
@@ -571,51 +583,90 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           {/* COLUMNA CENTRAL */}
           <main className="lg:col-span-6 flex flex-col gap-4">
+            {/* FILA DE 4 TARJETAS KPI REDIMENSIONADAS AL 100% DEL CONTENEDOR */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Total Incidencias */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
-                <span className="text-[9px] font-mono text-cyan-200 uppercase block">TOTAL INCIDENCIAS</span>
-                <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
-                <div className="my-1 relative flex items-center justify-center">
-                  <svg className="w-full h-12" viewBox="0 0 140 44">
-                    <path d="M0,22 L22,22 L29,8 L35,36 L41,3 L47,41 L53,10 L59,32 L65,22 L140,22" fill="none" stroke="#ec4899" strokeWidth="2" />
-                    <path d="M0,22 L75,22 L82,6 L88,38 L94,4 L100,40 L106,12 L112,30 L118,22 L140,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
-                  </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] bg-[#06162b]/90 px-2 rounded">
+              {/* KPI 1: TOTAL INCIDENCIAS CON ESPECTRO DE BARRAS DENSO Y NÚMERO GRANDE */}
+              <div className="border-2 border-cyan-400/75 bg-gradient-to-b from-[#0a2547] to-[#040f1e] rounded-xl p-3 text-center flex flex-col justify-between min-h-[135px] shadow-[0_0_25px_rgba(6,182,212,0.22)]">
+                <div>
+                  <span className="text-[10px] font-mono font-bold text-cyan-200 uppercase block tracking-wider">TOTAL INCIDENCIAS</span>
+                  <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 my-auto py-1">
+                  {/* Espectro izquierdo */}
+                  <div className="flex items-center gap-[2px] h-12">
+                    {waveBarsLeft.map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-[2.5px] rounded-full bg-gradient-to-t from-fuchsia-500 via-amber-400 to-cyan-300"
+                        style={{ height: `${h}px` }}
+                      />
+                    ))}
+                  </div>
+                  {/* Número principal gigante */}
+                  <span className="text-3xl sm:text-4xl xl:text-5xl font-black font-mono text-amber-300 drop-shadow-[0_0_16px_rgba(245,158,11,0.95)] px-1">
                     {hudData.total.toLocaleString()}
                   </span>
+                  {/* Espectro derecho */}
+                  <div className="flex items-center gap-[2px] h-12">
+                    {waveBarsRight.map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-[2.5px] rounded-full bg-gradient-to-t from-fuchsia-500 via-amber-400 to-cyan-300"
+                        style={{ height: `${h}px` }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Patrullaje Activo */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
-                <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">PATRULLAJE ACTIVO</span>
-                <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
-                    <span className="text-sm font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
-                    <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
+              {/* KPI 2: PATRULLAJE ACTIVO CON ANILLOS GRANDES DE 76PX */}
+              <div className="border-2 border-cyan-400/75 bg-gradient-to-b from-[#0a2547] to-[#040f1e] rounded-xl p-3 text-center flex flex-col justify-between min-h-[135px] shadow-[0_0_25px_rgba(6,182,212,0.22)]">
+                <span className="text-[10px] font-mono font-bold text-cyan-200 uppercase block tracking-wider">PATRULLAJE ACTIVO</span>
+                <div className="flex items-center justify-center gap-2.5 my-auto">
+                  <div className="w-20 h-20 rounded-full border-[3px] border-cyan-300 bg-cyan-950/50 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.65)] relative">
+                    <div className="absolute inset-1 rounded-full border border-dashed border-cyan-400/60" />
+                    <span className="text-2xl font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
+                    <span className="text-[8px] font-mono font-bold text-cyan-300 mt-0.5">MÓVILES</span>
                   </div>
-                  <div className="w-12 h-12 rounded-full border border-dashed border-cyan-400 flex items-center justify-center bg-cyan-950/50">
+                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-cyan-400/80 flex items-center justify-center bg-cyan-950/60 shadow-[inset_0_0_15px_rgba(34,211,238,0.3)]">
                     <PatrolTruckHologram small />
                   </div>
                 </div>
               </div>
 
-              {/* Móvil en Operación */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
-                <span className="text-[9px] font-mono text-cyan-200 uppercase block">MÓVIL EN OPERACIÓN</span>
-                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_8px_rgba(34,211,238,0.85)]">
-                  {hudData.topVehiculo}
+              {/* KPI 3: MÓVIL EN OPERACIÓN CON CAMIONETA HOLOGRÁFICA */}
+              <div className="border-2 border-cyan-400/75 bg-gradient-to-b from-[#0a2547] to-[#040f1e] rounded-xl p-2.5 text-center flex flex-col justify-between min-h-[135px] shadow-[0_0_25px_rgba(6,182,212,0.22)]">
+                <div>
+                  <span className="text-[10px] font-mono font-bold text-cyan-200 uppercase block tracking-wider">MÓVIL EN OPERACIÓN</span>
+                  <div className="text-sm sm:text-base font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]">
+                    {hudData.topVehiculo}
+                  </div>
                 </div>
                 <PatrolTruckHologram />
               </div>
 
-              {/* Turno Crítico */}
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
-                <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">TURNO CRÍTICO</span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.55)]">
-                  <span className="text-xs font-black font-mono text-white">{hudData.topTurnoPct}%</span>
-                  <span className="text-[7px] font-mono text-cyan-300">{hudData.topTurno}</span>
+              {/* KPI 4: TURNO CRÍTICO CON TACÓMETRO DE 84PX */}
+              <div className="border-2 border-cyan-400/75 bg-gradient-to-b from-[#0a2547] to-[#040f1e] rounded-xl p-3 text-center flex flex-col justify-between min-h-[135px] shadow-[0_0_25px_rgba(6,182,212,0.22)]">
+                <span className="text-[10px] font-mono font-bold text-cyan-200 uppercase block tracking-wider">TURNO CRÍTICO</span>
+                <div className="relative w-20 h-20 mx-auto my-auto flex items-center justify-center">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="34" stroke="#0c243e" strokeWidth="5" fill="transparent" />
+                    <circle cx="40" cy="40" r="26" stroke="#22d3ee" strokeWidth="2" strokeDasharray="6 4" fill="rgba(6,182,212,0.12)" />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="34"
+                      stroke="#22d3ee"
+                      strokeWidth="5"
+                      strokeDasharray={`${(hudData.topTurnoPct / 100) * (2 * Math.PI * 34)} ${2 * Math.PI * 34}`}
+                      strokeLinecap="round"
+                      fill="transparent"
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center justify-center">
+                    <span className="text-lg font-black font-mono text-white leading-none">{hudData.topTurnoPct}%</span>
+                    <span className="text-[8px] font-mono font-bold text-cyan-300 mt-0.5">{hudData.topTurno}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -636,7 +687,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               <div className="w-full h-60 sm:h-64 rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813]">
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* Grilla de Radar Holográfica en la esquina inferior izquierda (como la imagen) */}
                 <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/90 backdrop-blur-md rounded-lg p-2 pointer-events-none flex items-center gap-2.5">
                   <svg className="w-12 h-12" viewBox="0 0 60 60">
                     <rect x="2" y="2" width="56" height="56" stroke="#22d3ee" strokeWidth="1" fill="rgba(6,182,212,0.08)" />
@@ -656,10 +706,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* MATRIZ DE FRECUENCIA DE INCIDENCIAS CON MARCOS NEÓN */}
+            {/* MATRIZ DE FRECUENCIA DE INCIDENCIAS */}
             <div className="border-2 border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-xs font-mono font-black text-white uppercase">MATRIZ DE FRECUENCIA DE INCIDENCIAS</h3>
+                <h3 className="text-xs font-mono font-black text-white uppercase flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  MATRIZ DE FRECUENCIA DE INCIDENCIAS
+                </h3>
                 <span className="text-[10px] font-mono text-emerald-300 font-bold">{hudData.total.toLocaleString()} CASOS</span>
               </div>
               <div className="space-y-2 max-h-[205px] overflow-y-auto pr-1">
@@ -669,7 +722,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   frecuenciaModalidades.map((item, idx) => (
                     <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
                       <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-white truncate">{item.modalidad}</span>
-                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-4 rounded-sm border border-cyan-400/60 p-0.5 overflow-hidden shadow-[inset_0_0_8px_rgba(6,182,212,0.2)]">
+                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-4 rounded-sm border border-cyan-400/60 p-0.5 overflow-hidden">
                         <div
                           className={`h-full rounded-xs ${
                             idx === 0
@@ -693,10 +746,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
               <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
-              <div className="relative w-44 h-44 flex items-center justify-center my-1">
-                <svg className="w-44 h-44 -rotate-90" viewBox="0 0 110 110">
+              <div className="relative w-48 h-48 flex items-center justify-center my-1">
+                <svg className="w-48 h-48 -rotate-90" viewBox="0 0 110 110">
                   <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
                   <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
@@ -705,11 +758,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <circle cx="55" cy="55" r="22" stroke="#10b981" strokeWidth="5" strokeDasharray={`${(hudData.pctNoche / 100) * c3} ${c3}`} strokeLinecap="round" fill="transparent" />
                 </svg>
                 <div className="absolute text-center">
-                  <span className="text-lg font-black font-mono text-white block leading-none">{hudData.total.toLocaleString()}</span>
-                  <span className="text-[8px] font-mono text-cyan-300">EVENTOS</span>
+                  <span className="text-xl font-black font-mono text-white block leading-none">{hudData.total.toLocaleString()}</span>
+                  <span className="text-[9px] font-mono text-cyan-300">EVENTOS</span>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-1 w-full text-center font-mono text-[10px] mt-1">
+              <div className="grid grid-cols-3 gap-1.5 w-full text-center font-mono text-[10px] mt-1">
                 <div className="bg-[#030b17] p-1.5 rounded border border-cyan-400/40">
                   <span className="text-cyan-300 block">MAÑ</span>
                   <span className="font-bold text-white">{hudData.turnosCount.MAÑANA}</span>
@@ -725,7 +778,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex-1 flex flex-col justify-between">
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex-1 flex flex-col justify-between">
               <div>
                 <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
                 <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-2 mb-3">
