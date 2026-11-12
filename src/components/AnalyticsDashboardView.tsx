@@ -76,7 +76,6 @@ const getTurno = (r: any): string => {
   return 'NO REGISTRADO';
 };
 
-// Coordenadas base de sectores conocidos de Nuevo Chimbote para centrar el mapa 3D
 const SECTOR_COORDS: Record<string, [number, number]> = {
   CASUARINAS: [-78.5238, -9.1312],
   'BUENOS AIRES': [-78.5325, -9.1245],
@@ -100,7 +99,6 @@ const getSectorCenter = (title: string): [number, number] => {
   for (const [key, coords] of Object.entries(SECTOR_COORDS)) {
     if (upper.includes(key)) return coords;
   }
-  // Centro táctico por defecto: Plaza Mayor / Casuarinas - Nuevo Chimbote
   return [-78.5265, -9.1265];
 };
 
@@ -119,7 +117,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const markersRef = useRef<any[]>([]);
   const [mapReady, setMapReady] = useState<boolean>(false);
 
-  // 1. Urbanizaciones únicas y limpias
   const urbanizaciones = useMemo(() => {
     const map = new Map<string, number>();
     records.forEach((r) => {
@@ -180,7 +177,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     }
   };
 
-  // 2. Registros filtrados sumando los lugares agrupados
   const recordsInScope = useMemo(() => {
     return records.filter((r) => {
       const urb = getUrbanizacion(r);
@@ -191,7 +187,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     });
   }, [records, activeUrbsList, selectedTurno]);
 
-  // 3. Telemetría HUD
   const hudData = useMemo(() => {
     const total = recordsInScope.length;
     const vehiculos: Record<string, number> = {};
@@ -250,7 +245,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, [recordsInScope]);
 
-  // 4. Matriz de Frecuencia
   const frecuenciaModalidades = useMemo(() => {
     const counts: Record<string, number> = {};
     recordsInScope.forEach((r) => {
@@ -269,7 +263,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       .slice(0, 8);
   }, [recordsInScope]);
 
-  // 5. Inicialización de API MapLibre GL JS 3D (Edificios Extruidos + Modo Oscuro Táctico)
   useEffect(() => {
     let isMounted = true;
 
@@ -288,7 +281,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
           script.async = true;
           script.onload = () => resolve();
-          script.onerror = () => reject(new Error('No se pudo cargar MapLibre GL'));
+          script.onerror = () => reject(new Error('Error MapLibre GL'));
           document.head.appendChild(script);
         });
       }
@@ -311,7 +304,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       map.on('load', () => {
         if (!isMounted) return;
-        // Agregar fuente vectorial de OpenFreeMap para edificios 3D reales
         if (!map.getSource('openmaptiles-3d')) {
           map.addSource('openmaptiles-3d', {
             type: 'vector',
@@ -348,7 +340,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       mapInstanceRef.current = map;
     };
 
-    loadMapLibre().catch((err) => console.warn('Aviso cargando mapa 3D:', err));
+    loadMapLibre().catch((err) => console.warn('Aviso mapa 3D:', err));
 
     return () => {
       isMounted = false;
@@ -359,7 +351,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
-  // 6. Actualizar vuelo 3D y puntos de calor pulsantes cuando cambia el sector o los datos
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
@@ -374,11 +365,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       speed: 1.4
     });
 
-    // Limpiar marcadores previos
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // Crear puntos de calor y etiquetas tácticas sobre las manzanas del sector
     const count = Math.min(Math.max(recordsInScope.length, 3), 12);
     for (let i = 0; i < count; i++) {
       const r: any = recordsInScope[i] || {};
@@ -390,12 +379,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       const el = document.createElement('div');
       const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
-      el.innerHTML = `
-        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;">
-          <span style="position:absolute;width:22px;height:22px;border-radius:9999px;background:${color};opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>
-          <span style="width:9px;height:9px;border-radius:9999px;background:${color};box-shadow:0 0 10px ${color};border:1.5px solid #fff;"></span>
-        </div>
-      `;
+      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;"><span style="position:absolute;width:22px;height:22px;border-radius:9999px;background:${color};opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:9px;height:9px;border-radius:9999px;background:${color};box-shadow:0 0 10px ${color};border:1.5px solid #fff;"></span></div>`;
 
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat([offsetLng, offsetLat])
@@ -416,18 +400,15 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#020710] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      {/* Iluminación Volumétrica Holográfica */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(6,182,212,0.22),transparent_60%)] pointer-events-none" />
       <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.06)_1px,transparent_1px)] bg-[size:2.2rem_2.2rem] pointer-events-none" />
 
-      {/* CHASIS PRINCIPAL HOLOGRÁFICO */}
       <div className="relative z-10 max-w-[1720px] mx-auto border border-cyan-400/50 rounded-2xl bg-[#040d1c]/90 backdrop-blur-2xl shadow-[0_0_60px_rgba(6,182,212,0.25),inset_0_0_50px_rgba(6,182,212,0.08)] p-3 sm:p-4">
         <div className="absolute -top-[2px] -left-[2px] w-10 h-10 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_15px_rgba(34,211,238,0.6)]" />
         <div className="absolute -top-[2px] -right-[2px] w-10 h-10 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_15px_rgba(34,211,238,0.6)]" />
         <div className="absolute -bottom-[2px] -left-[2px] w-10 h-10 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-10 h-10 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER SUPERIOR TÁCTICO */}
         <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/30">
           <div className="flex items-center gap-3 w-full lg:w-auto">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-900/50 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.5)] shrink-0">
@@ -476,9 +457,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           </div>
         </header>
 
-        {/* GRID PRINCIPAL DE 3 COLUMNAS */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* ================= COLUMNA 1: SECTORIZACIÓN MULTI-SELECCIÓN (3 COLS) ================= */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
             <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)] relative">
               <div className="flex items-center justify-between mb-2">
@@ -491,7 +470,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
               </div>
 
-              {/* Buscador HUD */}
               <div className="relative mb-2">
                 <Search className="w-3.5 h-3.5 text-cyan-300 absolute left-2.5 top-2.5" />
                 <input
@@ -589,7 +567,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Rango de Turnos con 3 Diales Holográficos */}
             <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase">
@@ -652,7 +629,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Sliders Tácticos */}
             <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] space-y-2.5">
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-cyan-300 mb-1">
@@ -671,114 +647,4 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
 
               <div className="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px] font-mono text-cyan-400">
-                <span>AGENTE LÍDER:</span>
-                <span className="text-white font-bold truncate max-w-[155px]">{hudData.topAgente}</span>
-              </div>
-            </div>
-          </aside>
-
-          {/* ================= COLUMNA 2: NÚCLEO TÁCTICO CENTRAL (6 COLS) ================= */}
-          <main className="lg:col-span-6 flex flex-col gap-4">
-            {/* 4 TARJETAS HUD SUPERIORES */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Total Incidencias */}
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
-                <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block">
-                  TOTAL INCIDENCIAS
-                </span>
-                <span className="text-[9px] font-mono text-emerald-300 block truncate">
-                  {activeUrbsList.length > 1 ? `${activeUrbsList.length} SECTORES AGRUPADOS` : activeTitle}
-                </span>
-                <div className="my-1 relative flex items-center justify-center">
-                  <svg className="w-full h-11" viewBox="0 0 140 44">
-                    <path
-                      d="M0,22 L25,22 L32,10 L38,34 L44,4 L50,40 L56,12 L62,30 L68,22 L140,22"
-                      fill="none"
-                      stroke="#ec4899"
-                      strokeWidth="1.8"
-                    />
-                    <path
-                      d="M0,22 L75,22 L82,8 L88,36 L94,6 L100,38 L106,14 L112,28 L118,22 L140,22"
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.9)] bg-[#06162b]/90 px-2 rounded">
-                    {hudData.total.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Patrullaje Activo */}
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
-                <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block mb-1">
-                  PATRULLAJE ACTIVO
-                </span>
-                <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-11 h-11 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
-                    <span className="text-sm font-black font-mono text-white leading-none">
-                      {hudData.unidadesActivasCount}
-                    </span>
-                    <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
-                  </div>
-                  <div className="w-11 h-11 rounded-full border border-dashed border-emerald-400 flex items-center justify-center bg-emerald-950/40">
-                    <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Móvil en Operación */}
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
-                <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block">
-                  MÓVIL EN OPERACIÓN
-                </span>
-                <div className="text-sm sm:text-base font-black font-mono text-cyan-200 truncate mt-0.5 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                  {hudData.topVehiculo}
-                </div>
-                <svg className="w-24 h-8 mx-auto mt-1" viewBox="0 0 120 40">
-                  <path
-                    d="M15,26 L22,14 L52,12 L75,12 L95,18 L108,20 L108,28 L15,28 Z"
-                    fill="rgba(34,211,238,0.25)"
-                    stroke="#67e8f9"
-                    strokeWidth="1.6"
-                  />
-                  <rect x="48" y="8" width="12" height="3" fill="#ec4899" />
-                  <circle cx="33" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
-                  <circle cx="90" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
-                </svg>
-              </div>
-
-              {/* Turno Crítico */}
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center relative overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.18)]">
-                <span className="text-[9px] font-mono text-cyan-300 tracking-wider uppercase block mb-1">
-                  TURNO CRÍTICO
-                </span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.5)]">
-                  <span className="text-xs font-black font-mono text-white">
-                    {hudData.topTurnoPct}%
-                  </span>
-                  <span className="text-[7px] font-mono text-cyan-300">{hudData.topTurno}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* MAPA REAL 3D INTERACTIVO (API MAPLIBRE GL JS + OPENFREEMAP EDIFICIOS 3D) */}
-            <div className="border border-cyan-400/70 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-              <div className="flex items-center justify-between mb-1.5 px-1 relative z-10">
-                <span className="text-xs font-mono font-black tracking-widest text-cyan-100 uppercase flex items-center gap-2 truncate pr-2">
-                  <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
-                  {activeTitle}
-                </span>
-                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/90 border border-emerald-400/50 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
-                  <Compass className="w-3 h-3 text-emerald-400" />
-                  MAPA 3D SATELITAL // NUEVO CHIMBOTE
-                </span>
-              </div>
-
-              {/* Contenedor del Mapa 3D Real */}
-              <div className="w-full h-56 sm:h-64 rounded-lg overflow-hidden border border-cyan-500/40 relative">
-                <div ref={mapContainerRef} className="w-full h-full" />
-
-                {/* Etiqueta HUD flotante sobre el mapa 3D */}
-                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/
+                <span>AGENTE LÍDER:
