@@ -3,30 +3,17 @@ import {
   Shield,
   Car,
   UserCheck,
-  Clock,
   Printer,
   MapPin,
   Search,
   ChevronRight,
   BarChart3,
   Activity,
-  AlertTriangle,
   Radio,
   Crosshair,
   Cpu,
   Flame
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip
-} from 'recharts';
 import { IncidentRecord } from '../types';
 
 interface AnalyticsDashboardViewProps {
@@ -89,8 +76,6 @@ const getTurno = (r: any): string => {
   return 'NO REGISTRADO';
 };
 
-const HUD_COLORS = ['#06b6d4', '#ec4899', '#f59e0b', '#3b82f6'];
-
 export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   records = [],
   onFilterZona,
@@ -138,7 +123,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     });
   }, [records, activeUrb, selectedTurno]);
 
-  // 3. KPIs y datos para gráficos Recharts
+  // 3. KPIs y datos para gráficos vectoriales SVG
   const kpiData = useMemo(() => {
     const total = recordsInScope.length;
     const vehiculos: Record<string, number> = {};
@@ -168,17 +153,18 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     const topTurno = Object.entries(turnosCount).sort((a, b) => b[1] - a[1])[0] || ['MAÑANA', 0];
     const topTurnoPct = total > 0 ? Math.round((topTurno[1] / total) * 100) : 0;
 
-    // Datos formateados para Dona Recharts
-    const turnoChartData = [
-      { name: 'MAÑANA', value: turnosCount.MAÑANA, color: '#06b6d4' },
-      { name: 'TARDE', value: turnosCount.TARDE, color: '#f59e0b' },
-      { name: 'NOCHE', value: turnosCount.NOCHE, color: '#ec4899' }
-    ].filter((d) => d.value > 0);
+    // Datos para Dona SVG
+    const totalTurnosValidos = turnosCount.MAÑANA + turnosCount.TARDE + turnosCount.NOCHE || 1;
+    const pctManana = Math.round((turnosCount.MAÑANA / totalTurnosValidos) * 100);
+    const pctTarde = Math.round((turnosCount.TARDE / totalTurnosValidos) * 100);
+    const pctNoche = Math.max(0, 100 - pctManana - pctTarde);
 
-    // Datos formateados para Barras Recharts
-    const flotaChartData = vehiculosOrdenados.slice(0, 5).map(([unidad, casos]) => ({
-      unidad: unidad.length > 16 ? unidad.slice(0, 16) + '…' : unidad,
-      casos
+    // Datos para Barras de Flota
+    const maxFlota = vehiculosOrdenados[0]?.[1] || 1;
+    const flotaBars = vehiculosOrdenados.slice(0, 5).map(([unidad, casos]) => ({
+      unidad,
+      casos,
+      pct: Math.round((casos / maxFlota) * 100)
     }));
 
     return {
@@ -189,8 +175,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       topAgenteCount: topAgente[1],
       topTurno: topTurno[0],
       topTurnoPct,
-      turnoChartData,
-      flotaChartData
+      turnosCount,
+      pctManana,
+      pctTarde,
+      pctNoche,
+      flotaBars
     };
   }, [recordsInScope]);
 
@@ -222,10 +211,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (onFilterTurno) onFilterTurno(turno);
   };
 
-  // Cálculo de circunferencia para tacómetro SVG
+  // Cálculo Tacómetro Circular SVG
   const radius = 26;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (kpiData.topTurnoPct / 100) * circumference;
+
+  // Cálculo Dona SVG de Turnos (Radio 40 -> Circunferencia ~251.3)
+  const donutRadius = 40;
+  const donutCirc = 2 * Math.PI * donutRadius;
+  const dashManana = (kpiData.pctManana / 100) * donutCirc;
+  const dashTarde = (kpiData.pctTarde / 100) * donutCirc;
+  const dashNoche = (kpiData.pctNoche / 100) * donutCirc;
 
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 font-sans p-3 sm:p-6 relative overflow-hidden select-none">
@@ -235,14 +231,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
         {/* BARRA SUPERIOR DE TELEMETRÍA C2 */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 mb-6 border-b border-cyan-500/30 gap-4 bg-[#09101f]/80 backdrop-blur-md p-4 rounded-xl border border-slate-800/80 shadow-[0_0_30px_rgba(6,182,212,0.08)]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 mb-6 border-b border-cyan-500/30 gap-4 bg-[#09101f]/90 backdrop-blur-md p-4 rounded-xl border border-slate-800 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-cyan-950/80 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] shrink-0">
+            <div className="w-12 h-12 rounded-lg bg-cyan-950/90 border border-cyan-400/60 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.35)] shrink-0">
               <Crosshair className="w-6 h-6 text-cyan-400 animate-spin" style={{ animationDuration: '12s' }} />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono text-emerald-400 uppercase">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-[10px] font-mono text-emerald-400 uppercase font-bold">
                   <Radio className="w-3 h-3 animate-pulse" /> TELEMETRÍA ACTIVA // SUPABASE LIVE
                 </span>
                 <span className="text-[10px] font-mono text-slate-500">
@@ -252,9 +248,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               <h1 className="text-xl sm:text-2xl font-black tracking-wider text-white uppercase mt-1 flex items-center gap-2">
                 CENTRO DE MANDO TÁCTICO & FRECUENCIA VECINAL
               </h1>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
+              <p className="text-xs text-slate-400 font-mono mt-1">
                 OBJETIVO FOCALIZADO:{' '}
-                <span className="text-cyan-300 font-bold bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-500/30">
+                <span className="text-cyan-300 font-bold bg-cyan-950/90 px-2.5 py-0.5 rounded border border-cyan-500/40">
                   {activeUrb}
                 </span>
               </p>
@@ -263,7 +259,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Selector de Turno HUD */}
-            <div className="flex items-center bg-slate-950/90 p-1 rounded-lg border border-slate-800">
+            <div className="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800">
               {['TODOS', 'MAÑANA', 'TARDE', 'NOCHE'].map((turno) => (
                 <button
                   key={turno}
@@ -291,17 +287,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
         {/* 4 MÓDULOS HUD SUPERIORES CON ESQUINAS TÁCTICAS Y TACÓMETRO SVG */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* KPI 1: TOTAL INTERVENCIONES */}
-          <div className="relative bg-[#091122]/90 border border-cyan-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(6,182,212,0.06)]">
+          {/* KPI 1 */}
+          <div className="relative bg-[#091122]/90 border border-cyan-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(6,182,212,0.08)]">
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400 rounded-tl-xl" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-cyan-400 rounded-br-xl" />
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-mono text-cyan-400 tracking-widest uppercase font-bold">
                 INTERVENCIONES EN SECTOR
               </span>
-              <Cpu className="w-4 h-4 text-cyan-500/70" />
+              <Cpu className="w-4 h-4 text-cyan-500/80" />
             </div>
-            <div className="text-4xl font-black text-white font-mono tracking-tight my-1 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+            <div className="text-4xl font-black text-white font-mono tracking-tight my-1 drop-shadow-[0_0_12px_rgba(6,182,212,0.35)]">
               {kpiData.total.toLocaleString()}
             </div>
             <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
@@ -310,8 +306,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* KPI 2: MÓVIL LÍDER */}
-          <div className="relative bg-[#091122]/90 border border-blue-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(59,130,246,0.06)]">
+          {/* KPI 2 */}
+          <div className="relative bg-[#091122]/90 border border-blue-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(59,130,246,0.08)]">
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-blue-400 rounded-tl-xl" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-blue-400 rounded-br-xl" />
             <div className="flex items-center justify-between mb-1">
@@ -328,8 +324,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* KPI 3: AGENTE MÁS ACTIVO */}
-          <div className="relative bg-[#091122]/90 border border-fuchsia-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(236,72,153,0.06)]">
+          {/* KPI 3 */}
+          <div className="relative bg-[#091122]/90 border border-fuchsia-500/40 rounded-xl p-4 backdrop-blur-md shadow-[inset_0_0_25px_rgba(236,72,153,0.08)]">
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-fuchsia-400 rounded-tl-xl" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-fuchsia-400 rounded-br-xl" />
             <div className="flex items-center justify-between mb-1">
@@ -346,8 +342,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* KPI 4: TACÓMETRO CIRCULAR SVG DE TURNO CRÍTICO */}
-          <div className="relative bg-[#091122]/90 border border-amber-500/40 rounded-xl p-4 backdrop-blur-md flex items-center justify-between shadow-[inset_0_0_25px_rgba(245,158,11,0.06)]">
+          {/* KPI 4: TACÓMETRO CIRCULAR SVG */}
+          <div className="relative bg-[#091122]/90 border border-amber-500/40 rounded-xl p-4 backdrop-blur-md flex items-center justify-between shadow-[inset_0_0_25px_rgba(245,158,11,0.08)]">
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-amber-400 rounded-tl-xl" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-amber-400 rounded-br-xl" />
             <div>
@@ -362,7 +358,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </span>
             </div>
 
-            {/* Anillo Tacómetro SVG */}
             <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
               <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
                 <circle
@@ -396,7 +391,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         {/* ZONA DE OPERACIONES: SLICER VECINAL (IZQUIERDA) + ANALÍTICA Y GRÁFICOS (DERECHA) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* COLUMNA IZQUIERDA: SLICER VECINAL CON BUSCADOR */}
-          <div className="lg:col-span-4 bg-[#091122]/90 border border-slate-800 rounded-xl p-4 flex flex-col max-h-[760px] backdrop-blur-md">
+          <div className="lg:col-span-4 bg-[#091122]/90 border border-slate-800 rounded-xl p-4 flex flex-col max-h-[780px] backdrop-blur-md">
             <div className="pb-3 mb-3 border-b border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 flex items-center gap-1.5 font-bold">
@@ -454,7 +449,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: MATRIZ DE FRECUENCIA + GRÁFICOS RECHARTS */}
+          {/* COLUMNA DERECHA: MATRIZ DE FRECUENCIA + GRÁFICOS VECTORIALES SVG */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             {/* MATRIZ DE FRECUENCIA VECINAL */}
             <div className="bg-[#091122]/90 border border-cyan-500/30 rounded-xl p-5 backdrop-blur-md shadow-[0_0_30px_rgba(6,182,212,0.06)]">
@@ -519,97 +514,126 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* PANEL DE GRÁFICOS TÁCTICOS RECHARTS */}
+            {/* PANEL DE GRÁFICOS TÁCTICOS SVG NATIVOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* GRÁFICO DE DONA: DISTRIBUCIÓN POR TURNOS */}
-              <div className="bg-[#091122]/90 border border-slate-800 rounded-xl p-4 backdrop-blur-md">
-                <h3 className="text-xs font-mono uppercase text-cyan-400 font-bold mb-2 flex items-center gap-1.5">
+              {/* GRÁFICO DE DONA SVG: DISTRIBUCIÓN HORARIA POR TURNO */}
+              <div className="bg-[#091122]/90 border border-slate-800 rounded-xl p-4 backdrop-blur-md flex flex-col justify-between">
+                <h3 className="text-xs font-mono uppercase text-cyan-400 font-bold mb-3 flex items-center gap-1.5">
                   <Activity className="w-4 h-4" /> RADAR HORARIO POR TURNO
                 </h3>
-                <div className="h-52 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={kpiData.turnoChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={48}
-                        outerRadius={72}
-                        paddingAngle={4}
-                        dataKey="value"
-                      >
-                        {kpiData.turnoChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#050811',
-                          borderColor: '#06b6d4',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          color: '#fff'
-                        }}
+
+                <div className="flex items-center justify-around gap-4 my-2">
+                  {/* Anillo Dona SVG */}
+                  <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                    <svg className="w-32 h-32 -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r={donutRadius} stroke="#0f172a" strokeWidth="12" fill="transparent" />
+                      {/* Mañana (Cian) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={donutRadius}
+                        stroke="#06b6d4"
+                        strokeWidth="12"
+                        strokeDasharray={`${dashManana} ${donutCirc}`}
+                        strokeDashoffset="0"
+                        fill="transparent"
+                        className="drop-shadow-[0_0_6px_#06b6d4]"
                       />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 text-[11px] font-mono mt-1">
-                  {kpiData.turnoChartData.map((t) => (
-                    <div key={t.name} className="flex items-center gap-1.5">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: t.color }}
+                      {/* Tarde (Ámbar) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={donutRadius}
+                        stroke="#f59e0b"
+                        strokeWidth="12"
+                        strokeDasharray={`${dashTarde} ${donutCirc}`}
+                        strokeDashoffset={-dashManana}
+                        fill="transparent"
+                        className="drop-shadow-[0_0_6px_#f59e0b]"
                       />
-                      <span className="text-slate-300">
-                        {t.name}: <strong className="text-white">{t.value}</strong>
+                      {/* Noche (Magenta) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={donutRadius}
+                        stroke="#ec4899"
+                        strokeWidth="12"
+                        strokeDasharray={`${dashNoche} ${donutCirc}`}
+                        strokeDashoffset={-(dashManana + dashTarde)}
+                        fill="transparent"
+                        className="drop-shadow-[0_0_6px_#ec4899]"
+                      />
+                    </svg>
+                    <div className="absolute text-center">
+                      <span className="text-[10px] font-mono text-slate-400 block">TOTAL</span>
+                      <span className="text-sm font-black font-mono text-white">{kpiData.total}</span>
+                    </div>
+                  </div>
+
+                  {/* Leyenda lateral */}
+                  <div className="space-y-2.5 flex-1 font-mono text-xs">
+                    <div className="flex items-center justify-between bg-slate-950/70 px-2.5 py-1.5 rounded border border-cyan-500/20">
+                      <span className="flex items-center gap-2 text-cyan-300">
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4]" />
+                        MAÑANA
+                      </span>
+                      <span className="font-bold text-white">
+                        {kpiData.turnosCount.MAÑANA} ({kpiData.pctManana}%)
                       </span>
                     </div>
-                  ))}
+
+                    <div className="flex items-center justify-between bg-slate-950/70 px-2.5 py-1.5 rounded border border-amber-500/20">
+                      <span className="flex items-center gap-2 text-amber-300">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+                        TARDE
+                      </span>
+                      <span className="font-bold text-white">
+                        {kpiData.turnosCount.TARDE} ({kpiData.pctTarde}%)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-slate-950/70 px-2.5 py-1.5 rounded border border-fuchsia-500/20">
+                      <span className="flex items-center gap-2 text-fuchsia-300">
+                        <span className="w-2.5 h-2.5 rounded-full bg-fuchsia-400 shadow-[0_0_6px_#ec4899]" />
+                        NOCHE
+                      </span>
+                      <span className="font-bold text-white">
+                        {kpiData.turnosCount.NOCHE} ({kpiData.pctNoche}%)
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* GRÁFICO DE BARRAS: DESPLIEGUE DE FLOTA */}
-              <div className="bg-[#091122]/90 border border-slate-800 rounded-xl p-4 backdrop-blur-md">
-                <h3 className="text-xs font-mono uppercase text-fuchsia-400 font-bold mb-2 flex items-center gap-1.5">
+              {/* GRÁFICO DE BARRAS NEÓN: DESPLIEGUE POR UNIDAD MÓVIL */}
+              <div className="bg-[#091122]/90 border border-slate-800 rounded-xl p-4 backdrop-blur-md flex flex-col justify-between">
+                <h3 className="text-xs font-mono uppercase text-fuchsia-400 font-bold mb-3 flex items-center gap-1.5">
                   <BarChart3 className="w-4 h-4" /> VOLUMEN POR UNIDAD MÓVIL
                 </h3>
-                <div className="h-56 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={kpiData.flotaChartData}
-                      layout="vertical"
-                      margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                    >
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="unidad"
-                        width={110}
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(6,182,212,0.08)' }}
-                        contentStyle={{
-                          backgroundColor: '#050811',
-                          borderColor: '#ec4899',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          color: '#fff'
-                        }}
-                      />
-                      <Bar dataKey="casos" radius={[0, 4, 4, 0]}>
-                        {kpiData.flotaChartData.map((_, idx) => (
-                          <Cell
-                            key={`bar-${idx}`}
-                            fill={HUD_COLORS[idx % HUD_COLORS.length]}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+
+                <div className="space-y-3 my-auto">
+                  {kpiData.flotaBars.map((item, idx) => (
+                    <div key={item.unidad} className="space-y-1">
+                      <div className="flex justify-between text-xs font-mono">
+                        <span className="text-slate-200 truncate pr-2">{item.unidad}</span>
+                        <span className="text-cyan-300 font-bold shrink-0">
+                          {item.casos} interv.
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            idx === 0
+                              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_8px_#06b6d4]'
+                              : idx === 1
+                              ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500 shadow-[0_0_8px_#ec4899]'
+                              : 'bg-gradient-to-r from-amber-400 to-orange-500'
+                          }`}
+                          style={{ width: `${Math.max(item.pct, 6)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
