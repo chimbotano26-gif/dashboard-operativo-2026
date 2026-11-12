@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Shield, Printer, Search, Lock, Crosshair,
-  Settings, Wifi, CheckSquare, Square, Layers, X, Compass
+  Settings, Wifi, CheckSquare, Square, Layers, X, Compass, RotateCcw
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -58,7 +58,8 @@ const SECTOR_COORDS: Record<string, [number, number]> = {
   '1 DE MAYO': [-78.5390, -9.1260],
   '1° DE MAYO': [-78.5390, -9.1260],
   'VILLA MARIA': [-78.5430, -9.1160],
-  'SAN LUIS': [-78.5210, -9.1180]
+  'SAN LUIS': [-78.5210, -9.1180],
+  'JOSE CARLOS MARIATEGUI': [-78.5250, -9.1275]
 };
 
 const getSectorCenter = (title: string): [number, number] => {
@@ -70,11 +71,11 @@ const getSectorCenter = (title: string): [number, number] => {
 };
 
 const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
-  <div className={`relative flex items-center justify-center ${small ? 'w-12 h-8' : 'w-40 h-20 mx-auto'}`}>
+  <div className={`relative flex items-center justify-center ${small ? 'w-12 h-8' : 'w-44 h-20 mx-auto'}`}>
     <img
       src="/camioneta.png"
       alt="Patrullero 4x4"
-      className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]"
+      className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]"
     />
   </div>
 );
@@ -145,6 +146,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const selectAllFiltered = () => {
     const allNames = filteredUrbanizaciones.map((u) => u.nombre);
     if (allNames.length > 0) setSelectedUrbs(allNames);
+  };
+
+  // Botón para borrar todos los filtros activos de un solo clic
+  const handleResetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedUrbs([]);
+    setSelectedTurno('TODOS');
+    setMinCasosFilter(0);
+    if (onFilterZona) onFilterZona('');
+    if (onFilterTurno) onFilterTurno('TODOS');
   };
 
   const recordsInScope = useMemo(() => {
@@ -220,7 +231,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         porcentaje: Number(((count / total) * 100).toFixed(1))
       }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+      .slice(0, 7);
   }, [recordsInScope]);
 
   useEffect(() => {
@@ -251,7 +262,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         style: {
           version: 8,
           sources: {
-            'osm-dark': {
+            'osm-tiles': {
               type: 'raster',
               tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
               tileSize: 256
@@ -259,28 +270,26 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           },
           layers: [
             {
-              id: 'osm-dark-layer',
+              id: 'osm-cyber-layer',
               type: 'raster',
-              source: 'osm-dark',
-              paint: {
-                'raster-brightness-min': 0.12,
-                'raster-brightness-max': 0.95,
-                'raster-hue-rotate': 185,
-                'raster-saturation': 0.65,
-                'raster-contrast': 0.35
-              }
+              source: 'osm-tiles'
             }
           ]
         },
         center: getSectorCenter(activeTitle),
-        zoom: 15.8,
-        pitch: 62,
-        bearing: -25,
+        zoom: 16.0,
+        pitch: 65,
+        bearing: -28,
         antialias: true
       });
 
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.on('load', () => {
+        // Aplicar inversión oscura cian de alto contraste directamente al canvas del mapa
+        const canvas = map.getCanvas();
+        if (canvas) {
+          canvas.style.filter = 'invert(94%) hue-rotate(185deg) brightness(92%) contrast(140%) saturate(150%)';
+        }
         if (isMounted) setMapReady(true);
       });
       mapInstanceRef.current = map;
@@ -301,7 +310,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (!map || !maplibregl) return;
 
     const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: 16.0, pitch: 62, bearing: -25, speed: 1.4 });
+    map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 65, bearing: -28, speed: 1.4 });
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -316,7 +325,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       const el = document.createElement('div');
       const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
-      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:26px;height:26px;"><span style="position:absolute;width:26px;height:26px;border-radius:9999px;background:${color};opacity:0.45;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:11px;height:11px;border-radius:9999px;background:${color};box-shadow:0 0 14px ${color};border:2px solid #fff;"></span></div>`;
+      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:28px;height:28px;"><span style="position:absolute;width:28px;height:28px;border-radius:9999px;background:${color};opacity:0.45;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:12px;height:12px;border-radius:9999px;background:${color};box-shadow:0 0 16px ${color};border:2px solid #fff;"></span></div>`;
 
       const marker = new maplibregl.Marker({ element: el }).setLngLat([offsetLng, offsetLat]).addTo(map);
       markersRef.current.push(marker);
@@ -335,13 +344,21 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.28),transparent_65%)] pointer-events-none" />
+      {/* Iluminación Volumétrica Holográfica */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.3),transparent_65%)] pointer-events-none" />
       <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.08)_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
 
-      <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/60 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_70px_rgba(6,182,212,0.3)] p-3 sm:p-4">
+      {/* CHASIS PRINCIPAL CON ESQUINAS LUMINOSAS */}
+      <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/70 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_80px_rgba(6,182,212,0.35),inset_0_0_50px_rgba(6,182,212,0.12)] p-3 sm:p-4">
+        <div className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_20px_rgba(34,211,238,0.8)]" />
+        <div className="absolute -top-[2px] -right-[2px] w-12 h-12 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_20px_rgba(34,211,238,0.8)]" />
+        <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
+        <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
+
+        {/* HEADER DE TELEMETRÍA */}
         <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.55)] shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
               <Shield className="w-7 h-7 text-cyan-200" />
             </div>
             <div className="border border-cyan-400/50 bg-[#061830]/90 rounded-lg px-3 py-1.5 flex items-center gap-4">
@@ -355,8 +372,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-5 py-2.5 text-center shadow-[0_0_35px_rgba(6,182,212,0.4)]">
-            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase">
+          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-5 py-2.5 text-center shadow-[0_0_35px_rgba(6,182,212,0.45)]">
+            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
@@ -368,27 +385,35 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-            <div className="hidden sm:flex items-center gap-2 border border-cyan-400/50 bg-[#061830]/90 rounded-lg px-3 py-1.5">
-              <Lock className="w-4 h-4 text-emerald-400" />
-              <div className="text-[9px] font-mono leading-tight">
-                <span className="text-cyan-400 block">CYBER-ENCRYPTION</span>
-                <span className="text-emerald-300 font-bold">SUPABASE LIVE</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+            {/* BOTÓN PARA BORRAR TODOS LOS FILTROS */}
+            <button
+              onClick={handleResetAllFilters}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400 rounded-lg text-rose-200 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
+              title="Reiniciar búsqueda, sectores y turnos"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>BORRAR FILTROS</span>
+            </button>
+
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer transition"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
             >
               <Printer className="w-4 h-4 text-cyan-200" />
-              <span>EXPORTAR FICHA</span>
+              <span>FICHA</span>
             </button>
           </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* COLUMNA IZQUIERDA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative">
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.15)]">
+              {/* Esquina superior magenta y esquina inferior verde neón como la imagen */}
+              <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-4 border-l-4 border-fuchsia-400 rounded-tl-xl pointer-events-none" />
+              <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl pointer-events-none" />
+
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-emerald-400" />
@@ -418,7 +443,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               {searchTerm.trim() !== '' && filteredUrbanizaciones.length > 1 && (
                 <button
                   onClick={selectAllFiltered}
-                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   AGRUPAR TODOS ({filteredUrbanizaciones.length})
@@ -453,9 +478,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   return (
                     <div
                       key={urb.nombre}
-                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border ${
+                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border transition-all ${
                         isChecked
-                          ? 'bg-gradient-to-r from-emerald-500/35 via-cyan-500/30 to-blue-900/50 border-emerald-300 text-white font-black'
+                          ? 'bg-gradient-to-r from-emerald-500/40 via-cyan-500/35 to-blue-900/50 border-emerald-300 text-white font-black shadow-[0_0_20px_rgba(16,185,129,0.5)]'
                           : 'bg-[#071930]/85 border-cyan-500/30 text-cyan-200/85 hover:border-cyan-400'
                       }`}
                     >
@@ -477,6 +502,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
+            {/* Rango de Turnos con Diales Concéntricos Triples */}
             <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">RANGO DE TURNOS</h3>
@@ -500,14 +526,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center ${
-                        active ? 'bg-cyan-500/30 border-cyan-300' : 'bg-[#030b17] border-cyan-500/30'
+                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center transition ${
+                        active ? 'bg-cyan-500/30 border-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.55)]' : 'bg-[#030b17] border-cyan-500/30'
                       }`}
                     >
                       <div className="relative w-12 h-12 flex items-center justify-center">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                          <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="4" fill="transparent" />
-                          <circle cx="24" cy="24" r={r} stroke={t.color} strokeWidth="4" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
+                          <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="3.5" fill="transparent" />
+                          <circle cx="24" cy="24" r="14" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.55" fill="transparent" />
+                          <circle cx="24" cy="24" r="9" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.3" fill="transparent" />
+                          <circle cx="24" cy="24" r={r} stroke={t.color} strokeWidth="3.5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
                         </svg>
                         <span className="absolute text-[10px] font-mono font-black text-white">{t.pct}%</span>
                       </div>
@@ -541,9 +569,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </aside>
 
+          {/* COLUMNA CENTRAL */}
           <main className="lg:col-span-6 flex flex-col gap-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
+              {/* Total Incidencias */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block">TOTAL INCIDENCIAS</span>
                 <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
                 <div className="my-1 relative flex items-center justify-center">
@@ -551,16 +581,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <path d="M0,22 L22,22 L29,8 L35,36 L41,3 L47,41 L53,10 L59,32 L65,22 L140,22" fill="none" stroke="#ec4899" strokeWidth="2" />
                     <path d="M0,22 L75,22 L82,6 L88,38 L94,4 L100,40 L106,12 L112,30 L118,22 L140,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
                   </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 bg-[#06162b]/90 px-2 rounded">
+                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] bg-[#06162b]/90 px-2 rounded">
                     {hudData.total.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
+              {/* Patrullaje Activo */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">PATRULLAJE ACTIVO</span>
                 <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
                     <span className="text-sm font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
                     <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
                   </div>
@@ -570,24 +601,27 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2 text-center">
+              {/* Móvil en Operación */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block">MÓVIL EN OPERACIÓN</span>
-                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate">
+                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_8px_rgba(34,211,238,0.85)]">
                   {hudData.topVehiculo}
                 </div>
                 <PatrolTruckHologram />
               </div>
 
-              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center">
+              {/* Turno Crítico */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
                 <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">TURNO CRÍTICO</span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.55)]">
                   <span className="text-xs font-black font-mono text-white">{hudData.topTurnoPct}%</span>
                   <span className="text-[7px] font-mono text-cyan-300">{hudData.topTurno}</span>
                 </div>
               </div>
             </div>
 
-            <div className="border-2 border-cyan-400/80 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden">
+            {/* MAPA OSCURO CIAN DE ALTO CONTRASTE */}
+            <div className="border-2 border-cyan-400/80 bg-[#020813] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]">
               <div className="flex items-center justify-between mb-1.5 px-1">
                 <span className="text-xs font-mono font-black text-white uppercase flex items-center gap-2 truncate pr-2">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
@@ -595,20 +629,35 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
                 <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 border border-emerald-400 px-2 py-0.5 rounded flex items-center gap-1 shrink-0 font-bold">
                   <Compass className="w-3 h-3 text-emerald-300" />
-                  SATÉLITE 3D // NUEVO CHIMBOTE
+                  RADAR TÁCTICO 3D // NUEVO CHIMBOTE
                 </span>
               </div>
 
-              <div className="w-full h-60 sm:h-64 rounded-lg overflow-hidden border border-cyan-400/50 relative">
+              <div className="w-full h-60 sm:h-64 rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813]">
                 <div ref={mapContainerRef} className="w-full h-full" />
-                <div className="absolute bottom-2 left-2 z-10 border border-cyan-300/70 bg-[#030d1c]/95 rounded px-2.5 py-1 text-[9px] font-mono text-cyan-100 pointer-events-none">
-                  <div>UNIDAD ASIGNADA: <strong className="text-emerald-300">{hudData.topVehiculo}</strong></div>
-                  <div className="text-cyan-400">Clic derecho + arrastrar para girar 3D</div>
+
+                {/* Grilla de Radar Holográfica en la esquina inferior izquierda (como la imagen) */}
+                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/90 backdrop-blur-md rounded-lg p-2 pointer-events-none flex items-center gap-2.5">
+                  <svg className="w-12 h-12" viewBox="0 0 60 60">
+                    <rect x="2" y="2" width="56" height="56" stroke="#22d3ee" strokeWidth="1" fill="rgba(6,182,212,0.08)" />
+                    <line x1="20" y1="2" x2="20" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
+                    <line x1="40" y1="2" x2="40" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
+                    <line x1="2" y1="20" x2="58" y2="20" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
+                    <line x1="2" y1="40" x2="58" y2="40" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
+                    <circle cx="32" cy="28" r="10" stroke="#f43f5e" strokeWidth="1.2" fill="rgba(244,63,94,0.2)" />
+                    <circle cx="32" cy="28" r="3" fill="#f59e0b" />
+                  </svg>
+                  <div className="text-[9px] font-mono text-cyan-100 leading-relaxed">
+                    <div>UNIDAD: <strong className="text-emerald-300">{hudData.topVehiculo}</strong></div>
+                    <div>EVENTOS: <strong className="text-amber-300">{hudData.total}</strong></div>
+                    <div className="text-cyan-400">Clic derecho: rotar 3D</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="border border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5">
+            {/* MATRIZ DE FRECUENCIA DE INCIDENCIAS CON MARCOS NEÓN */}
+            <div className="border-2 border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-xs font-mono font-black text-white uppercase">MATRIZ DE FRECUENCIA DE INCIDENCIAS</h3>
                 <span className="text-[10px] font-mono text-emerald-300 font-bold">{hudData.total.toLocaleString()} CASOS</span>
@@ -620,14 +669,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   frecuenciaModalidades.map((item, idx) => (
                     <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
                       <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-white truncate">{item.modalidad}</span>
-                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-3.5 rounded-sm border border-cyan-400/50 p-0.5 overflow-hidden">
+                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-4 rounded-sm border border-cyan-400/60 p-0.5 overflow-hidden shadow-[inset_0_0_8px_rgba(6,182,212,0.2)]">
                         <div
                           className={`h-full rounded-xs ${
                             idx === 0
-                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500'
+                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500 shadow-[0_0_12px_#f43f5e]'
                               : idx === 1
-                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400'
-                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300'
+                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400 shadow-[0_0_12px_#f59e0b]'
+                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 shadow-[0_0_10px_#22d3ee]'
                           }`}
                           style={{ width: `${Math.max(item.porcentaje, 5)}%` }}
                         />
@@ -642,6 +691,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </main>
 
+          {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
             <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
               <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
@@ -650,8 +700,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
                   <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
-                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" />
-                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" />
+                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#22d3ee]" />
+                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#f97316]" />
                   <circle cx="55" cy="55" r="22" stroke="#10b981" strokeWidth="5" strokeDasharray={`${(hudData.pctNoche / 100) * c3} ${c3}`} strokeLinecap="round" fill="transparent" />
                 </svg>
                 <div className="absolute text-center">
@@ -680,7 +730,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
                 <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-2 mb-3">
                   <svg className="w-full h-16" viewBox="0 0 220 60">
-                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.3)" />
+                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.35)" />
                     <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25" fill="none" stroke="#34d399" strokeWidth="2.4" />
                   </svg>
                 </div>
