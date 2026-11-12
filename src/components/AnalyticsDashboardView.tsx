@@ -72,7 +72,7 @@ const getSectorCenter = (title: string): [number, number] => {
 const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
   <div className={`relative flex items-center justify-center ${small ? 'w-12 h-8' : 'w-40 h-20 mx-auto'}`}>
     <img
-      src="/camioneta.jpg"
+      src="/camioneta.png"
       alt="Patrullero 4x4"
       className="w-full h-full object-contain mix-blend-screen brightness-125 contrast-125 drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]"
     />
