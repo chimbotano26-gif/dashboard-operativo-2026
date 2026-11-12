@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Shield, Printer, Search, Radio, Lock, Crosshair,
+  Shield, Printer, Search, Lock, Crosshair,
   Settings, Wifi, CheckSquare, Square, Layers, X, Compass
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
@@ -68,6 +68,69 @@ const getSectorCenter = (title: string): [number, number] => {
   }
   return [-78.5265, -9.1265];
 };
+
+// Render Vectorial Holográfico de Patrullero 4x4 (Perspectiva 3/4 con circulina y detalle técnico)
+const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
+  <svg
+    className={small ? 'w-11 h-7' : 'w-32 h-14 mx-auto drop-shadow-[0_0_10px_rgba(34,211,238,0.85)]'}
+    viewBox="0 0 220 105"
+    fill="none"
+  >
+    <defs>
+      <linearGradient id="truckBodyGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.45" />
+        <stop offset="60%" stopColor="#0284c7" stopOpacity="0.2" />
+        <stop offset="100%" stopColor="#082f49" stopOpacity="0.6" />
+      </linearGradient>
+    </defs>
+
+    {/* Sombra / Plataforma láser bajo llantas */}
+    <ellipse cx="110" cy="94" rx="88" ry="6" fill="#22d3ee" fillOpacity="0.18" />
+
+    {/* Tolva trasera y cabina doble 4x4 en perspectiva 3/4 */}
+    <path
+      d="M28,56 L32,38 L78,36 L98,18 L148,18 L174,38 L202,44 L206,66 L194,74 L176,74 C176,61 154,61 154,74 L92,74 C92,61 70,61 70,74 L34,74 L26,66 Z"
+      fill="url(#truckBodyGrad)"
+      stroke="#67e8f9"
+      strokeWidth="2.2"
+      strokeLinejoin="round"
+    />
+
+    {/* Líneas estructurales de carrocería y puertas */}
+    <path d="M80,37 L173,39" stroke="#22d3ee" strokeWidth="1.3" strokeOpacity="0.85" />
+    <path d="M124,19 L124,72" stroke="#22d3ee" strokeWidth="1.2" strokeOpacity="0.7" />
+    <path d="M96,38 L96,72" stroke="#22d3ee" strokeWidth="1.2" strokeOpacity="0.7" />
+
+    {/* Parabrisas y ventanas laterales */}
+    <polygon
+      points="102,22 145,22 166,37 96,37"
+      fill="#083344"
+      stroke="#a5f3fc"
+      strokeWidth="1.5"
+    />
+    <line x1="124" y1="22" x2="124" y2="37" stroke="#67e8f9" strokeWidth="1.5" />
+
+    {/* Parrilla frontal, faros LED y defensa */}
+    <rect x="195" y="46" width="9" height="12" rx="2" fill="#e0f2fe" stroke="#22d3ee" strokeWidth="1.2" />
+    <path d="M176,47 L193,47 L193,61 L176,61 Z" fill="#0c4a6e" stroke="#38bdf8" strokeWidth="1.2" />
+    <line x1="178" y1="51" x2="191" y2="51" stroke="#7dd3fc" strokeWidth="1" />
+    <line x1="178" y1="56" x2="191" y2="56" stroke="#7dd3fc" strokeWidth="1" />
+
+    {/* Circulina Táctica de Emergencia (Azul/Rojo Neón) */}
+    <rect x="114" y="12" width="14" height="5" rx="1.5" fill="#22d3ee" stroke="#ffffff" strokeWidth="0.8" />
+    <rect x="128" y="12" width="14" height="5" rx="1.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="0.8" />
+
+    {/* Rueda Trasera */}
+    <circle cx="81" cy="75" r="16" fill="#030b17" stroke="#67e8f9" strokeWidth="2.5" />
+    <circle cx="81" cy="75" r="9" fill="#082f49" stroke="#22d3ee" strokeWidth="1.5" />
+    <circle cx="81" cy="75" r="3" fill="#a5f3fc" />
+
+    {/* Rueda Delantera */}
+    <circle cx="165" cy="75" r="16" fill="#030b17" stroke="#67e8f9" strokeWidth="2.5" />
+    <circle cx="165" cy="75" r="9" fill="#082f49" stroke="#22d3ee" strokeWidth="1.5" />
+    <circle cx="165" cy="75" r="3" fill="#a5f3fc" />
+  </svg>
+);
 
 export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   records = [],
@@ -239,9 +302,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         container: mapContainerRef.current,
         style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
         center: getSectorCenter(activeTitle),
-        zoom: 15.4,
-        pitch: 62,
-        bearing: -24,
+        zoom: 16.0,
+        pitch: 65,
+        bearing: -28,
         antialias: true
       });
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
@@ -257,12 +320,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             source: 'openmaptiles-3d',
             'source-layer': 'building',
             type: 'fill-extrusion',
-            minzoom: 14,
+            minzoom: 13,
             paint: {
-              'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'render_height'], 0, '#082f49', 20, '#0e7490', 50, '#22d3ee'],
-              'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
+              'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'render_height'], 0, '#0c4a6e', 12, '#06b6d4', 35, '#67e8f9'],
+              'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 11],
               'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-              'fill-extrusion-opacity': 0.72
+              'fill-extrusion-opacity': 0.85
             }
           });
         }
@@ -286,22 +349,22 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     if (!map || !maplibregl) return;
 
     const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: 15.6, pitch: 62, bearing: -24, speed: 1.4 });
+    map.flyTo({ center: [lng, lat], zoom: 16.1, pitch: 65, bearing: -28, speed: 1.4 });
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const count = Math.min(Math.max(recordsInScope.length, 3), 12);
+    const count = Math.min(Math.max(recordsInScope.length, 4), 14);
     for (let i = 0; i < count; i++) {
       const r: any = recordsInScope[i] || {};
       const parsedLat = parseFloat(r.lat || r.latitud);
       const parsedLng = parseFloat(r.lng || r.longitud);
-      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * 0.0028;
-      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * 0.0022;
+      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * 0.0026;
+      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * 0.0020;
 
       const el = document.createElement('div');
       const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
-      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;"><span style="position:absolute;width:22px;height:22px;border-radius:9999px;background:${color};opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:9px;height:9px;border-radius:9999px;background:${color};box-shadow:0 0 10px ${color};border:1.5px solid #fff;"></span></div>`;
+      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:26px;height:26px;"><span style="position:absolute;width:26px;height:26px;border-radius:9999px;background:${color};opacity:0.45;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:11px;height:11px;border-radius:9999px;background:${color};box-shadow:0 0 14px ${color};border:2px solid #fff;"></span></div>`;
 
       const marker = new maplibregl.Marker({ element: el }).setLngLat([offsetLng, offsetLat]).addTo(map);
       markersRef.current.push(marker);
@@ -319,17 +382,26 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const c3 = 2 * Math.PI * 22;
 
   return (
-    <div className="min-h-screen bg-[#020710] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(6,182,212,0.22),transparent_60%)] pointer-events-none" />
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.06)_1px,transparent_1px)] bg-[size:2.2rem_2.2rem] pointer-events-none" />
+    <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
+      {/* Atmósfera Volumétrica Holográfica */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.28),transparent_65%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.08)_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
 
-      <div className="relative z-10 max-w-[1720px] mx-auto border border-cyan-400/50 rounded-2xl bg-[#040d1c]/90 backdrop-blur-2xl shadow-[0_0_60px_rgba(6,182,212,0.25)] p-3 sm:p-4">
-        <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/30">
+      {/* CHASIS PRINCIPAL HOLOGRÁFICO */}
+      <div className="relative z-10 max-w-[1740px] mx-auto border-2 border-cyan-400/60 rounded-2xl bg-[#040d1d]/90 backdrop-blur-2xl shadow-[0_0_70px_rgba(6,182,212,0.3),inset_0_0_50px_rgba(6,182,212,0.1)] p-3 sm:p-4">
+        {/* Esquinas iluminadas estilo visor */}
+        <div className="absolute -top-[2px] -left-[2px] w-11 h-11 border-t-4 border-l-4 border-cyan-300 rounded-tl-2xl pointer-events-none shadow-[-4px_-4px_18px_rgba(34,211,238,0.7)]" />
+        <div className="absolute -top-[2px] -right-[2px] w-11 h-11 border-t-4 border-r-4 border-cyan-300 rounded-tr-2xl pointer-events-none shadow-[4px_-4px_18px_rgba(34,211,238,0.7)]" />
+        <div className="absolute -bottom-[2px] -left-[2px] w-11 h-11 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
+        <div className="absolute -bottom-[2px] -right-[2px] w-11 h-11 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
+
+        {/* HEADER SUPERIOR DE TELEMETRÍA */}
+        <header className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-900/50 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.5)] shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.55)] shrink-0">
               <Shield className="w-7 h-7 text-cyan-200" />
             </div>
-            <div className="border border-cyan-400/40 bg-[#06162d]/90 rounded-lg px-3 py-1.5 flex items-center gap-4">
+            <div className="border border-cyan-400/50 bg-[#061830]/90 rounded-lg px-3 py-1.5 flex items-center gap-4">
               <div>
                 <span className="text-[9px] font-mono text-cyan-400 tracking-widest block">TELEMETRÍA</span>
                 <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">
@@ -340,28 +412,30 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-700/30 to-cyan-950 border-y-2 border-x border-cyan-400/80 rounded-xl px-5 py-2.5 text-center shadow-[0_0_30px_rgba(6,182,212,0.35)]">
-            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase">
+          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-5 py-2.5 text-center shadow-[0_0_35px_rgba(6,182,212,0.4)]">
+            <h1 className="text-sm sm:text-lg md:text-xl font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
-              <span className="bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-400/40">OBJETIVO: {activeTitle}</span>
+              <span className="bg-cyan-500/25 px-2 py-0.5 rounded border border-cyan-300/50 font-bold">
+                OBJETIVO: {activeTitle}
+              </span>
               <span>•</span>
               <span>TURNO: {selectedTurno}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-            <div className="hidden sm:flex items-center gap-2 border border-cyan-400/40 bg-[#06162d]/90 rounded-lg px-3 py-1.5">
+            <div className="hidden sm:flex items-center gap-2 border border-cyan-400/50 bg-[#061830]/90 rounded-lg px-3 py-1.5">
               <Lock className="w-4 h-4 text-emerald-400" />
               <div className="text-[9px] font-mono leading-tight">
-                <span className="text-cyan-400 block">ENLACE SEGURO</span>
+                <span className="text-cyan-400 block">CYBER-ENCRYPTION</span>
                 <span className="text-emerald-300 font-bold">SUPABASE LIVE</span>
               </div>
             </div>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/30 to-emerald-500/30 hover:from-cyan-400/40 hover:to-emerald-400/40 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer transition"
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500/35 to-emerald-500/35 hover:from-cyan-400/50 hover:to-emerald-400/50 border border-cyan-300 rounded-lg text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer transition"
             >
               <Printer className="w-4 h-4 text-cyan-200" />
               <span>EXPORTAR FICHA</span>
@@ -370,14 +444,15 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* COLUMNA IZQUIERDA: SECTORIZACIÓN MULTI-SELECCIÓN */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 relative">
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase flex items-center gap-1.5">
+                <h2 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                  SECTORIZACIÓN / AGRUPAR
+                  SECTORIZACIÓN / OPERATIVO
                 </h2>
-                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-400/50 font-bold">
                   {activeUrbsList.length} MARCADO{activeUrbsList.length > 1 ? 'S' : ''}
                 </span>
               </div>
@@ -388,8 +463,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Ej: CASUARINAS, BRISAS..."
-                  className="w-full bg-[#020813] border border-cyan-400/50 focus:border-emerald-400 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-white placeholder-cyan-700 focus:outline-none"
+                  placeholder="Buscar y agrupar lugar..."
+                  className="w-full bg-[#020813] border border-cyan-400/60 focus:border-emerald-400 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-white placeholder-cyan-700 focus:outline-none"
                 />
                 {searchTerm && (
                   <button onClick={() => setSearchTerm('')} className="absolute right-2 top-2 text-cyan-400 hover:text-white cursor-pointer">
@@ -401,7 +476,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               {searchTerm.trim() !== '' && filteredUrbanizaciones.length > 1 && (
                 <button
                   onClick={selectAllFiltered}
-                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/40 to-cyan-600/40 border border-emerald-400 text-[10px] font-mono font-black text-emerald-200 uppercase flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full mb-2 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-emerald-600/50 to-cyan-600/50 border border-emerald-300 text-[10px] font-mono font-black text-white uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   AGRUPAR TODOS ({filteredUrbanizaciones.length})
@@ -409,9 +484,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               )}
 
               {activeUrbsList.length > 1 && (
-                <div className="mb-2 p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/40">
-                  <div className="flex items-center justify-between text-[9px] font-mono text-cyan-300 mb-1">
-                    <span>SECTORES UNIFICADOS:</span>
+                <div className="mb-2 p-2 rounded-lg bg-cyan-950/70 border border-cyan-400/50">
+                  <div className="flex items-center justify-between text-[9px] font-mono text-cyan-200 mb-1">
+                    <span>SECTORES AGRUPADOS:</span>
                     <button onClick={() => selectSingleUrb(activeUrbsList[0])} className="text-amber-300 underline cursor-pointer">
                       LIMPIAR
                     </button>
@@ -421,7 +496,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       <span
                         key={name}
                         onClick={() => toggleUrbSelection(name)}
-                        className="text-[9px] font-mono bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 px-1.5 py-0.5 rounded cursor-pointer"
+                        className="text-[9px] font-mono bg-emerald-500/25 border border-emerald-400 text-emerald-100 px-1.5 py-0.5 rounded cursor-pointer"
                       >
                         {name} ×
                       </span>
@@ -430,26 +505,26 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[245px] overflow-y-auto pr-1">
                 {filteredUrbanizaciones.map((urb) => {
                   const isChecked = activeUrbsList.includes(urb.nombre);
                   return (
                     <div
                       key={urb.nombre}
-                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border ${
+                      className={`w-full px-2.5 py-2 rounded-lg text-xs font-mono flex items-center justify-between border transition-all ${
                         isChecked
-                          ? 'bg-gradient-to-r from-emerald-500/30 via-cyan-500/25 to-blue-900/40 border-emerald-400 text-white font-black'
-                          : 'bg-[#071930]/80 border-cyan-500/25 text-cyan-200/80 hover:border-cyan-400/70'
+                          ? 'bg-gradient-to-r from-emerald-500/35 via-cyan-500/30 to-blue-900/50 border-emerald-300 text-white font-black shadow-[0_0_18px_rgba(16,185,129,0.45)]'
+                          : 'bg-[#071930]/85 border-cyan-500/30 text-cyan-200/85 hover:border-cyan-400'
                       }`}
                     >
                       <button onClick={() => toggleUrbSelection(urb.nombre)} className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer">
-                        {isChecked ? <CheckSquare className="w-4 h-4 text-emerald-300 shrink-0" /> : <Square className="w-4 h-4 text-cyan-500/70 shrink-0" />}
+                        {isChecked ? <CheckSquare className="w-4 h-4 text-emerald-300 shrink-0" /> : <Square className="w-4 h-4 text-cyan-500 shrink-0" />}
                         <span className="truncate pr-1">{urb.nombre}</span>
                       </button>
                       <button
                         onClick={() => selectSingleUrb(urb.nombre)}
                         className={`text-[10px] px-2 py-0.5 rounded cursor-pointer shrink-0 ${
-                          isChecked ? 'bg-emerald-400 text-slate-950 font-black' : 'bg-slate-950 text-cyan-300 border border-cyan-500/30'
+                          isChecked ? 'bg-emerald-400 text-slate-950 font-black' : 'bg-slate-950 text-cyan-300 border border-cyan-500/40'
                         }`}
                       >
                         {urb.count}
@@ -460,9 +535,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5">
+            {/* Rango de Turnos con 3 Diales */}
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-mono font-black tracking-wider text-cyan-300 uppercase">RANGO DE TURNOS</h3>
+                <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">RANGO DE TURNOS</h3>
                 {selectedTurno !== 'TODOS' && (
                   <button onClick={() => handleTurnoClick(selectedTurno)} className="text-[10px] font-mono text-amber-300 underline cursor-pointer">
                     TODOS
@@ -483,13 +559,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center ${
-                        active ? 'bg-cyan-500/25 border-cyan-300' : 'bg-[#030b17] border-cyan-500/25'
+                      className={`p-2 rounded-xl border cursor-pointer flex flex-col items-center transition ${
+                        active ? 'bg-cyan-500/30 border-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-[#030b17] border-cyan-500/30'
                       }`}
                     >
                       <div className="relative w-12 h-12 flex items-center justify-center">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
                           <circle cx="24" cy="24" r={r} stroke="#0c2238" strokeWidth="4" fill="transparent" />
+                          <circle cx="24" cy="24" r="13" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
                           <circle cx="24" cy="24" r={r} stroke={t.color} strokeWidth="4" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
                         </svg>
                         <span className="absolute text-[10px] font-mono font-black text-white">{t.pct}%</span>
@@ -501,9 +578,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 space-y-2.5">
+            {/* Sliders Tácticos */}
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 space-y-2.5">
               <div>
-                <div className="flex justify-between text-[10px] font-mono text-cyan-300 mb-1">
+                <div className="flex justify-between text-[10px] font-mono text-cyan-200 mb-1">
                   <span>FILTRO DENSIDAD MÍNIMA</span>
                   <span className="text-emerald-300 font-bold">{minCasosFilter}+ CASOS</span>
                 </div>
@@ -517,85 +595,90 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   className="w-full accent-emerald-400 cursor-pointer h-1.5 bg-cyan-950 rounded-lg"
                 />
               </div>
-              <div className="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px] font-mono text-cyan-400">
+              <div className="pt-2 border-t border-cyan-500/30 flex items-center justify-between text-[10px] font-mono text-cyan-300">
                 <span>AGENTE LÍDER:</span>
                 <span className="text-white font-bold truncate max-w-[155px]">{hudData.topAgente}</span>
               </div>
             </div>
           </aside>
 
+          {/* COLUMNA CENTRAL */}
           <main className="lg:col-span-6 flex flex-col gap-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center">
-                <span className="text-[9px] font-mono text-cyan-300 uppercase block">TOTAL INCIDENCIAS</span>
+              {/* KPI 1: Total Incidencias */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+                <span className="text-[9px] font-mono text-cyan-200 uppercase block">TOTAL INCIDENCIAS</span>
                 <span className="text-[9px] font-mono text-emerald-300 block truncate">{activeTitle}</span>
                 <div className="my-1 relative flex items-center justify-center">
-                  <svg className="w-full h-11" viewBox="0 0 140 44">
-                    <path d="M0,22 L25,22 L32,10 L38,34 L44,4 L50,40 L56,12 L62,30 L68,22 L140,22" fill="none" stroke="#ec4899" strokeWidth="1.8" />
-                    <path d="M0,22 L75,22 L82,8 L88,36 L94,6 L100,38 L106,14 L112,28 L118,22 L140,22" fill="none" stroke="#f59e0b" strokeWidth="1.8" />
+                  <svg className="w-full h-12" viewBox="0 0 140 44">
+                    <path d="M0,22 L22,22 L29,8 L35,36 L41,3 L47,41 L53,10 L59,32 L65,22 L140,22" fill="none" stroke="#ec4899" strokeWidth="2" />
+                    <path d="M0,22 L75,22 L82,6 L88,38 L94,4 L100,40 L106,12 L112,30 L118,22 L140,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
                   </svg>
-                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 bg-[#06162b]/90 px-2 rounded">
+                  <span className="absolute text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] bg-[#06162b]/90 px-2 rounded">
                     {hudData.total.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center">
-                <span className="text-[9px] font-mono text-cyan-300 uppercase block mb-1">PATRULLAJE ACTIVO</span>
+              {/* KPI 2: Patrullaje Activo */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+                <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">PATRULLAJE ACTIVO</span>
                 <div className="flex items-center justify-center gap-2 my-1">
-                  <div className="w-11 h-11 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 rounded-full border-2 border-cyan-300 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.6)]">
                     <span className="text-sm font-black font-mono text-white leading-none">{hudData.unidadesActivasCount}</span>
                     <span className="text-[7px] font-mono text-cyan-300">MÓVILES</span>
                   </div>
-                  <div className="w-11 h-11 rounded-full border border-dashed border-emerald-400 flex items-center justify-center bg-emerald-950/40">
-                    <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <div className="w-12 h-12 rounded-full border border-dashed border-cyan-400 flex items-center justify-center bg-cyan-950/50">
+                    <PatrolTruckHologram small />
                   </div>
                 </div>
               </div>
 
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center">
-                <span className="text-[9px] font-mono text-cyan-300 uppercase block">MÓVIL EN OPERACIÓN</span>
-                <div className="text-sm sm:text-base font-black font-mono text-cyan-200 truncate mt-0.5">{hudData.topVehiculo}</div>
-                <svg className="w-24 h-8 mx-auto mt-1" viewBox="0 0 120 40">
-                  <path d="M15,26 L22,14 L52,12 L75,12 L95,18 L108,20 L108,28 L15,28 Z" fill="rgba(34,211,238,0.25)" stroke="#67e8f9" strokeWidth="1.6" />
-                  <circle cx="33" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
-                  <circle cx="90" cy="29" r="6" fill="#030914" stroke="#67e8f9" strokeWidth="2" />
-                </svg>
+              {/* KPI 3: Móvil en Operación con Camioneta 4x4 3/4 Holográfica */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-2.5 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+                <span className="text-[9px] font-mono text-cyan-200 uppercase block">MÓVIL EN OPERACIÓN</span>
+                <div className="text-xs sm:text-sm font-black font-mono text-cyan-300 truncate drop-shadow-[0_0_8px_rgba(34,211,238,0.85)]">
+                  {hudData.topVehiculo}
+                </div>
+                <PatrolTruckHologram />
               </div>
 
-              <div className="border border-cyan-400/60 bg-gradient-to-b from-[#081d38] to-[#040f1e] rounded-xl p-3 text-center">
-                <span className="text-[9px] font-mono text-cyan-300 uppercase block mb-1">TURNO CRÍTICO</span>
-                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center">
+              {/* KPI 4: Turno Crítico */}
+              <div className="border border-cyan-400/70 bg-gradient-to-b from-[#092140] to-[#040f1e] rounded-xl p-3 text-center shadow-[0_0_25px_rgba(6,182,212,0.2)]">
+                <span className="text-[9px] font-mono text-cyan-200 uppercase block mb-1">TURNO CRÍTICO</span>
+                <div className="w-12 h-12 mx-auto rounded-full border-2 border-cyan-300 bg-cyan-950/80 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.55)]">
                   <span className="text-xs font-black font-mono text-white">{hudData.topTurnoPct}%</span>
                   <span className="text-[7px] font-mono text-cyan-300">{hudData.topTurno}</span>
                 </div>
               </div>
             </div>
 
-            <div className="border border-cyan-400/70 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden">
+            {/* MAPA 3D REAL MAPLIBRE GL JS */}
+            <div className="border-2 border-cyan-400/80 bg-[#030d1a] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.25)]">
               <div className="flex items-center justify-between mb-1.5 px-1">
-                <span className="text-xs font-mono font-black text-cyan-100 uppercase flex items-center gap-2 truncate pr-2">
+                <span className="text-xs font-mono font-black text-white uppercase flex items-center gap-2 truncate pr-2">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
                   {activeTitle}
                 </span>
-                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/90 border border-emerald-400/50 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
-                  <Compass className="w-3 h-3 text-emerald-400" />
-                  MAPA 3D // NUEVO CHIMBOTE
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 border border-emerald-400 px-2 py-0.5 rounded flex items-center gap-1 shrink-0 font-bold">
+                  <Compass className="w-3 h-3 text-emerald-300" />
+                  SATÉLITE 3D // NUEVO CHIMBOTE
                 </span>
               </div>
 
-              <div className="w-full h-56 sm:h-64 rounded-lg overflow-hidden border border-cyan-500/40 relative">
+              <div className="w-full h-60 sm:h-64 rounded-lg overflow-hidden border border-cyan-400/50 relative">
                 <div ref={mapContainerRef} className="w-full h-full" />
-                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/60 bg-[#030d1c]/90 rounded px-2.5 py-1 text-[9px] font-mono text-cyan-200 pointer-events-none">
-                  <div>MÓVIL LÍDER: <strong className="text-emerald-300">{hudData.topVehiculo}</strong></div>
-                  <div className="text-cyan-400">Clic derecho y arrastra para rotar 3D</div>
+                <div className="absolute bottom-2 left-2 z-10 border border-cyan-300/70 bg-[#030d1c]/95 rounded px-2.5 py-1 text-[9px] font-mono text-cyan-100 pointer-events-none">
+                  <div>UNIDAD ASIGNADA: <strong className="text-emerald-300">{hudData.topVehiculo}</strong></div>
+                  <div className="text-cyan-400">Clic derecho + arrastrar para girar 3D</div>
                 </div>
               </div>
             </div>
 
-            <div className="border border-cyan-400/60 bg-[#051326]/95 rounded-xl p-3.5">
+            {/* MATRIZ DE FRECUENCIA DE INCIDENCIAS */}
+            <div className="border border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-xs font-mono font-black text-cyan-200 uppercase">MATRIZ DE FRECUENCIA DE INCIDENCIAS</h3>
+                <h3 className="text-xs font-mono font-black text-white uppercase">MATRIZ DE FRECUENCIA DE INCIDENCIAS</h3>
                 <span className="text-[10px] font-mono text-emerald-300 font-bold">{hudData.total.toLocaleString()} CASOS</span>
               </div>
               <div className="space-y-2 max-h-[205px] overflow-y-auto pr-1">
@@ -604,15 +687,15 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 ) : (
                   frecuenciaModalidades.map((item, idx) => (
                     <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
-                      <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-cyan-50 truncate">{item.modalidad}</span>
-                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-3.5 rounded-sm border border-cyan-400/40 p-0.5 overflow-hidden">
+                      <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-white truncate">{item.modalidad}</span>
+                      <div className="col-span-5 sm:col-span-6 bg-[#020813] h-3.5 rounded-sm border border-cyan-400/50 p-0.5 overflow-hidden">
                         <div
                           className={`h-full rounded-xs ${
                             idx === 0
-                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500'
+                              ? 'bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-500 shadow-[0_0_12px_#f43f5e]'
                               : idx === 1
-                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400'
-                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300'
+                              ? 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-amber-400 shadow-[0_0_12px_#f59e0b]'
+                              : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 shadow-[0_0_10px_#22d3ee]'
                           }`}
                           style={{ width: `${Math.max(item.porcentaje, 5)}%` }}
                         />
@@ -627,16 +710,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </main>
 
+          {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 flex flex-col items-center">
-              <h3 className="text-xs font-mono font-black text-cyan-300 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
+              <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
               <div className="relative w-44 h-44 flex items-center justify-center my-1">
                 <svg className="w-44 h-44 -rotate-90" viewBox="0 0 110 110">
                   <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
                   <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
-                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" />
-                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" />
+                  <circle cx="55" cy="55" r="44" stroke="#22d3ee" strokeWidth="7" strokeDasharray={`${(hudData.pctManana / 100) * c1} ${c1}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#22d3ee]" />
+                  <circle cx="55" cy="55" r="33" stroke="#f97316" strokeWidth="6" strokeDasharray={`${(hudData.pctTarde / 100) * c2} ${c2}`} strokeLinecap="round" fill="transparent" className="drop-shadow-[0_0_8px_#f97316]" />
                   <circle cx="55" cy="55" r="22" stroke="#10b981" strokeWidth="5" strokeDasharray={`${(hudData.pctNoche / 100) * c3} ${c3}`} strokeLinecap="round" fill="transparent" />
                 </svg>
                 <div className="absolute text-center">
@@ -645,38 +729,38 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1 w-full text-center font-mono text-[10px] mt-1">
-                <div className="bg-[#030b17] p-1.5 rounded border border-cyan-400/30">
+                <div className="bg-[#030b17] p-1.5 rounded border border-cyan-400/40">
                   <span className="text-cyan-300 block">MAÑ</span>
                   <span className="font-bold text-white">{hudData.turnosCount.MAÑANA}</span>
                 </div>
-                <div className="bg-[#030b17] p-1.5 rounded border border-orange-400/30">
+                <div className="bg-[#030b17] p-1.5 rounded border border-orange-400/40">
                   <span className="text-orange-300 block">TAR</span>
                   <span className="font-bold text-white">{hudData.turnosCount.TARDE}</span>
                 </div>
-                <div className="bg-[#030b17] p-1.5 rounded border border-emerald-400/30">
+                <div className="bg-[#030b17] p-1.5 rounded border border-emerald-400/40">
                   <span className="text-emerald-300 block">NOC</span>
                   <span className="font-bold text-white">{hudData.turnosCount.NOCHE}</span>
                 </div>
               </div>
             </div>
 
-            <div className="border border-cyan-400/50 bg-[#051326]/95 rounded-xl p-3.5 flex-1 flex flex-col justify-between">
+            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex-1 flex flex-col justify-between">
               <div>
-                <h3 className="text-xs font-mono font-black text-cyan-300 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
+                <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
                 <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-2 mb-3">
                   <svg className="w-full h-16" viewBox="0 0 220 60">
-                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.25)" />
-                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25" fill="none" stroke="#34d399" strokeWidth="2.2" />
+                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.3)" />
+                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25" fill="none" stroke="#34d399" strokeWidth="2.4" />
                   </svg>
                 </div>
                 <div className="space-y-2.5">
                   {hudData.flotaList.map((item, i) => (
                     <div key={item.unidad} className="space-y-1">
                       <div className="flex justify-between text-[11px] font-mono">
-                        <span className="text-cyan-50 truncate pr-2">{item.unidad}</span>
+                        <span className="text-white truncate pr-2">{item.unidad}</span>
                         <span className="text-emerald-300 font-black shrink-0">{item.casos}</span>
                       </div>
-                      <div className="w-full bg-[#020813] h-2 rounded-full overflow-hidden border border-cyan-400/30">
+                      <div className="w-full bg-[#020813] h-2 rounded-full overflow-hidden border border-cyan-400/40">
                         <div
                           className={`h-full rounded-full ${
                             i === 0 ? 'bg-gradient-to-r from-cyan-400 to-emerald-400' : i === 1 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-cyan-400'
