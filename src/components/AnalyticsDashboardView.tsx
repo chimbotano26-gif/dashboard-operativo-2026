@@ -51,7 +51,7 @@ const getTurno = (r: any): string => {
   const t = cleanText(r.turno);
   if (t.includes('MAÑANA') || t.includes('MANANA')) return 'MAÑANA';
   if (t.includes('TARDE')) return 'TARDE';
-  if (t.includes('NOCHE')) return 'NO REGISTRADO';
+  if (t.includes('NOCHE')) return 'NOCHE';
   return 'NO REGISTRADO';
 };
 
@@ -139,7 +139,8 @@ const create3DPinHtml = (variant: PinVariant, index: number): string => {
   const uid = `p3d_${variant}_${index}`;
 
   return `
-    <div style="position:relative;width:36px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-18px);">
+    <div style="position:relative;width:38px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-20px);">
+      <span style="position:absolute;bottom:1px;width:16px;height:6px;border-radius:9999px;background:${p.mid};opacity:0.65;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>
       <svg width="36" height="44" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="${uid}" cx="35%" cy="25%" r="70%">
@@ -148,8 +149,8 @@ const create3DPinHtml = (variant: PinVariant, index: number): string => {
             <stop offset="100%" stop-color="${p.dark}" />
           </radialGradient>
         </defs>
-        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid})" stroke="#ffffff" stroke-width="2"/>
-        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.45"/>
+        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid})" stroke="#ffffff" stroke-width="2.2"/>
+        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.5"/>
       </svg>
     </div>
   `;
@@ -256,8 +257,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
+  // En pantalla principal siempre es oscuro (para coordinar colores).
+  // Al agrandar a pantalla completa, permite elegir entre Claro o Noche.
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
-  const [mapClearMode, setMapClearMode] = useState<boolean>(true);
+  const [expandedMapTheme, setExpandedMapTheme] = useState<'LIGHT' | 'DARK'>('LIGHT');
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -515,21 +518,28 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     [todasFrecuenciasModalidades]
   );
 
-  const handleFlyToPoint = (pt: CriticalMapPoint) => {
-    setSelectedPinId(pt.id);
-    const map = mapInstanceRef.current;
+  // Vuelo cinematográfico suave en 3D que se detiene DEBAJO del pin crítico
+  const flyToPinCinematic = (map: any, pt: CriticalMapPoint) => {
     if (!map) return;
     try {
+      const nextBearing = ((pt.index * 28) % 90) - 45;
       map.flyTo({
         center: [pt.lng, pt.lat],
-        zoom: 17.6,
-        pitch: 62,
-        bearing: -20,
-        speed: 2.2
+        offset: [0, 105], // Posiciona la cámara ligeramente debajo del pin para lucirlo en 3D
+        zoom: 17.5,
+        pitch: 72,
+        bearing: nextBearing,
+        duration: 2400, // Vuelo cinematográfico suave de 2.4 segundos (sin saltos toscos)
+        curve: 1.45,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        essential: true
       });
-    } catch (e) {
-      console.warn('Error al mover cámara:', e);
-    }
+    } catch (e) {}
+  };
+
+  const handleFlyToPoint = (pt: CriticalMapPoint) => {
+    setSelectedPinId(pt.id);
+    flyToPinCinematic(mapInstanceRef.current, pt);
   };
 
   const handleResetMapCamera = () => {
@@ -537,7 +547,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
     const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 62, bearing: -25, speed: 1.6 });
+    try {
+      map.flyTo({
+        center: [lng, lat],
+        offset: [0, 0],
+        zoom: 16.0,
+        pitch: 62,
+        bearing: -25,
+        duration: 1800,
+        curve: 1.3
+      });
+    } catch (e) {}
   };
 
   const drawBeveledChartInPdf = (
@@ -840,7 +860,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     }
   };
 
-  // Inicializar MapLibre GL una sola vez
   useEffect(() => {
     let isMounted = true;
     const loadMapLibre = async () => {
@@ -885,7 +904,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             ]
           },
           center: [-78.5265, -9.1265],
-          zoom: 16.2,
+          zoom: 16.0,
           pitch: 62,
           bearing: -25,
           antialias: true
@@ -910,24 +929,23 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
-  // Aplicar contraste nítido para calles
+  // Control automático de colores del mapa:
+  // - Pantalla principal: siempre oscuro cian para coordinar con todo el panel.
+  // - Pantalla completa: permite escoger entre Claro (calles nítidas) o Noche.
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
     try {
       const canvas = map.getCanvas();
       if (!canvas) return;
-      if (mapClearMode) {
+      if (isMapExpanded && expandedMapTheme === 'LIGHT') {
         canvas.style.filter = 'brightness(104%) contrast(125%) saturate(135%)';
       } else {
-        canvas.style.filter = 'invert(90%) hue-rotate(185deg) brightness(115%) contrast(155%) saturate(160%)';
+        canvas.style.filter = 'invert(92%) hue-rotate(185deg) brightness(106%) contrast(148%) saturate(155%)';
       }
-    } catch (e) {
-      console.warn('Aviso filtro mapa:', e);
-    }
-  }, [mapClearMode, mapReady]);
+    } catch (e) {}
+  }, [isMapExpanded, expandedMapTheme, mapReady]);
 
-  // Redimensionar mapa al expandir/contraer pantalla completa
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -939,17 +957,23 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     return () => clearTimeout(timer);
   }, [isMapExpanded]);
 
-  // Centrar mapa cuando cambia el sector seleccionado
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !mapReady) return;
     const [lng, lat] = getSectorCenter(activeTitle);
     try {
-      map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 62, bearing: -25, speed: 1.5 });
+      map.flyTo({
+        center: [lng, lat],
+        offset: [0, 0],
+        zoom: 16.0,
+        pitch: 62,
+        bearing: -25,
+        duration: 1800,
+        curve: 1.3
+      });
     } catch (e) {}
   }, [activeTitle, mapReady]);
 
-  // Dibujar pines 3D sin provocar bucles de estado
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
@@ -970,7 +994,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           setSelectedPinId(pt.id);
-          map.flyTo({ center: [pt.lng, pt.lat], zoom: 17.6, pitch: 62, bearing: -20, speed: 2.2 });
+          flyToPinCinematic(map, pt);
         });
 
         const popupHtml = `
@@ -1192,9 +1216,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RANGO DE TURNOS AGRANDADO Y RESALTADO */}
-            <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-4 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
-              <div className="flex items-center justify-between mb-2">
+            {/* RANGO DE TURNOS EXPANDIDO A ALTURA COMPLETA SIN ESPACIOS VACÍOS */}
+            <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
+              <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-sm font-mono font-black tracking-wider text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
                   RANGO DE TURNOS
                 </h3>
@@ -1203,61 +1227,68 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     VER TODOS
                   </button>
                 ) : (
-                  <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/90 border border-cyan-400/50 px-2 py-0.5 rounded">
+                  <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/90 border border-cyan-400/50 px-2 py-0.5 rounded font-bold">
                     FILTRO ACTIVO
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5 text-center my-auto">
+              <div className="grid grid-cols-3 gap-2.5 text-center flex-1 items-stretch">
                 {[
-                  { label: 'MAÑANA', pct: hudData.pctManana, count: hudData.turnosCount.MAÑANA, color: '#10b981', glow: 'rgba(16,185,129,0.55)' },
-                  { label: 'TARDE', pct: hudData.pctTarde, count: hudData.turnosCount.TARDE, color: '#22d3ee', glow: 'rgba(34,211,238,0.55)' },
-                  { label: 'NOCHE', pct: hudData.pctNoche, count: hudData.turnosCount.NOCHE, color: '#ec4899', glow: 'rgba(236,72,153,0.55)' }
+                  { label: 'MAÑANA', horario: '06-14H', pct: hudData.pctManana, count: hudData.turnosCount.MAÑANA, color: '#10b981', glow: 'rgba(16,185,129,0.55)' },
+                  { label: 'TARDE', horario: '14-22H', pct: hudData.pctTarde, count: hudData.turnosCount.TARDE, color: '#22d3ee', glow: 'rgba(34,211,238,0.55)' },
+                  { label: 'NOCHE', horario: '22-06H', pct: hudData.pctNoche, count: hudData.turnosCount.NOCHE, color: '#ec4899', glow: 'rgba(236,72,153,0.55)' }
                 ].map((t) => {
                   const active = selectedTurno === t.label;
-                  const r = 38;
+                  const r = 42;
                   const circ = 2 * Math.PI * r;
                   const offset = circ - (t.pct / 100) * circ;
                   return (
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`py-3.5 px-1.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition-all ${
+                      className={`h-full py-3 px-1.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-between transition-all ${
                         active
-                          ? 'bg-cyan-500/30 border-cyan-200 scale-[1.03]'
-                          : 'bg-[#030b17]/90 border-cyan-500/40 hover:border-cyan-300 hover:bg-[#061830]'
+                          ? 'bg-cyan-500/30 border-cyan-200 scale-[1.02]'
+                          : 'bg-[#030b17]/95 border-cyan-500/45 hover:border-cyan-300 hover:bg-[#061830]'
                       }`}
                       style={{ boxShadow: active ? `0 0 26px ${t.glow}` : undefined }}
                     >
-                      <div className="relative w-24 h-24 flex items-center justify-center">
-                        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 90 90">
-                          <circle cx="45" cy="45" r={r} stroke="#0c2238" strokeWidth="6" fill="transparent" />
-                          <circle cx="45" cy="45" r="28" stroke={t.color} strokeWidth="2.5" strokeOpacity="0.65" fill={t.color} fillOpacity="0.14" />
-                          <circle cx="45" cy="45" r="19" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
+                      <span className="text-[9px] font-mono text-cyan-400/80 tracking-widest font-bold">
+                        {t.horario}
+                      </span>
+
+                      <div className="relative w-24 h-24 xl:w-28 xl:h-28 flex items-center justify-center my-1">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r={r} stroke="#0c2238" strokeWidth="7" fill="transparent" />
+                          <circle cx="50" cy="50" r="31" stroke={t.color} strokeWidth="2.5" strokeOpacity="0.65" fill={t.color} fillOpacity="0.15" />
+                          <circle cx="50" cy="50" r="21" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
                           <circle
-                            cx="45"
-                            cy="45"
+                            cx="50"
+                            cy="50"
                             r={r}
                             stroke={t.color}
-                            strokeWidth="6"
+                            strokeWidth="7"
                             strokeDasharray={circ}
                             strokeDashoffset={offset}
                             strokeLinecap="round"
                             fill="transparent"
-                            style={{ filter: `drop-shadow(0 0 6px ${t.color})` }}
+                            style={{ filter: `drop-shadow(0 0 7px ${t.color})` }}
                           />
                         </svg>
-                        <span className="absolute text-base font-mono font-black text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+                        <span className="absolute text-lg xl:text-xl font-mono font-black text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]">
                           {t.pct}%
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono font-black text-cyan-100 mt-1.5 tracking-wider">
-                        {t.label}
-                      </span>
-                      <span className="text-[9px] font-mono text-cyan-400 font-bold">
-                        {t.count} reg
-                      </span>
+
+                      <div className="w-full">
+                        <span className="text-xs font-mono font-black text-cyan-100 block tracking-wider">
+                          {t.label}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold block mt-0.5" style={{ color: t.color }}>
+                          {t.count} reg
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -1416,7 +1447,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
 
             {/* ================================================================= */}
-            {/* MAPA NÍTIDO CON SALTO RÁPIDO ENTRE PUNTOS CRÍTICOS Y PANTALLA FULL */}
+            {/* MAPA TÁCTICO 3D: OSCURO EN PRINCIPAL, CLARO/NOCHE AL AGRANDAR     */}
             {/* ================================================================= */}
             <div
               className={
@@ -1432,17 +1463,29 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    onClick={() => setMapClearMode((prev) => !prev)}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-black uppercase cursor-pointer transition ${
-                      mapClearMode
-                        ? 'bg-amber-400/25 border-amber-300 text-amber-200'
-                        : 'bg-cyan-950 border-cyan-400 text-cyan-200'
-                    }`}
-                  >
-                    {mapClearMode ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-cyan-300" />}
-                    <span>{mapClearMode ? 'CALLES NÍTIDAS' : 'RADAR OSCURO'}</span>
-                  </button>
+                  {/* El selector de Claro / Noche aparece SOLO al agrandar el mapa */}
+                  {isMapExpanded && (
+                    <button
+                      onClick={() => setExpandedMapTheme((prev) => (prev === 'LIGHT' ? 'DARK' : 'LIGHT'))}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-black uppercase cursor-pointer transition ${
+                        expandedMapTheme === 'LIGHT'
+                          ? 'bg-amber-400/25 border-amber-300 text-amber-200'
+                          : 'bg-cyan-950 border-cyan-400 text-cyan-200'
+                      }`}
+                    >
+                      {expandedMapTheme === 'LIGHT' ? (
+                        <>
+                          <Moon className="w-3.5 h-3.5 text-cyan-300" />
+                          <span>CAMBIAR A MODO NOCHE</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sun className="w-3.5 h-3.5 text-amber-300" />
+                          <span>CAMBIAR A MAPA CLARO</span>
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setIsMapExpanded((prev) => !prev)}
@@ -1470,7 +1513,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               >
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* PANEL FLOTANTE DE SALTO RÁPIDO A PUNTOS CRÍTICOS */}
+                {/* PANEL FLOTANTE DE RECORRIDO 3D SUAVE A PUNTOS CRÍTICOS */}
                 <div
                   className={`absolute top-2 left-2 z-10 border border-cyan-400/80 bg-[#030d1c]/92 backdrop-blur-md rounded-xl p-2 shadow-xl flex flex-col ${
                     isMapExpanded ? 'w-72 max-h-[75%]' : 'w-52 max-h-40'
@@ -1479,14 +1522,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1 mb-1">
                     <span className="text-[9px] font-mono font-black text-cyan-200 uppercase flex items-center gap-1">
                       <Navigation className="w-3 h-3 text-emerald-400" />
-                      IR A PUNTO CRÍTICO ({criticalPoints.length})
+                      PUNTOS CRÍTICOS ({criticalPoints.length})
                     </span>
                     {selectedPinId && (
                       <button
                         onClick={handleResetMapCamera}
                         className="text-[8px] font-mono text-amber-300 underline cursor-pointer"
                       >
-                        CENTRAR
+                        VISTA GENERAL
                       </button>
                     )}
                   </div>
@@ -1521,28 +1564,27 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 </div>
 
-                {/* Tarjeta flotante del punto crítico enfocado */}
+                {/* Tarjeta flotante ubicada justo debajo/al costado del encuadre del pin */}
                 {selectedPointObj && (
-                  <div className="absolute top-2 right-12 z-10 border border-cyan-300 bg-[#030d1c]/95 backdrop-blur-md rounded-xl p-2.5 max-w-xs shadow-2xl">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[10px] font-mono font-black text-amber-300">
-                        PUNTO #{selectedPointObj.index}
+                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-10 border-2 border-cyan-300 bg-[#030d1c]/95 backdrop-blur-md rounded-xl px-3.5 py-2.5 min-w-[240px] max-w-sm shadow-[0_0_25px_rgba(34,211,238,0.6)]">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="text-[10px] font-mono font-black text-amber-300 uppercase">
+                        PUNTO CRÍTICO #{selectedPointObj.index}
                       </span>
                       <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="text-[11px] font-mono font-bold text-white leading-tight mb-1">
+                    <div className="text-xs font-mono font-black text-white leading-tight mb-1">
                       {selectedPointObj.modalidad}
                     </div>
-                    <div className="text-[9px] font-mono text-cyan-200">
+                    <div className="text-[10px] font-mono text-cyan-200">
                       <div>SECTOR: {selectedPointObj.lugar}</div>
                       <div>TURNO: {selectedPointObj.turno} • MÓVIL: {selectedPointObj.vehiculo}</div>
                     </div>
                   </div>
                 )}
 
-                {/* Leyenda inferior de colores 3D */}
                 <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/92 backdrop-blur-md rounded-lg px-2.5 py-1.5 pointer-events-none">
                   <div className="flex flex-wrap items-center gap-2.5 text-[9px] font-mono text-cyan-100">
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />ALTA</span>
@@ -1661,9 +1703,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* VENTANA MODAL DE VISTA PREVIA CON GRÁFICO 3D BISELADO ANTES DE DESCARGAR  */}
-      {/* ========================================================================= */}
+      {/* VENTANA MODAL DE VISTA PREVIA CON GRÁFICO 3D BISELADO ANTES DE DESCARGAR */}
       {isPreviewOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-[#051326] border-2 border-cyan-400 rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-[0_0_60px_rgba(6,182,212,0.5)] overflow-hidden">
