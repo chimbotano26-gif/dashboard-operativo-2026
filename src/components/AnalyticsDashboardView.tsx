@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
-  Square, Layers, X, Compass, RotateCcw, Activity, FileDown, Edit3, Eye, CalendarRange
+  Square, Layers, X, Compass, RotateCcw, Activity, FileDown,
+  Edit3, Eye, CalendarRange, Maximize2, Minimize2
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -107,6 +108,39 @@ const getSectorCenter = (title: string): [number, number] => {
   return [-78.5265, -9.1265];
 };
 
+// Generador de Pin 3D volumétrico con aro hueco y brillo especular (estilo referencia 3D)
+const create3DPinHtml = (variant: 'BLUE' | 'RED' | 'AMBER' | 'EMERALD', index: number): string => {
+  const palettes = {
+    BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1', glow: 'rgba(14,165,233,0.75)' },
+    RED: { light: '#fda4af', mid: '#f43f5e', dark: '#9f1239', glow: 'rgba(244,63,94,0.8)' },
+    AMBER: { light: '#fde047', mid: '#f59e0b', dark: '#b45309', glow: 'rgba(245,158,11,0.8)' },
+    EMERALD: { light: '#6ee7b7', mid: '#10b981', dark: '#047857', glow: 'rgba(16,185,129,0.75)' }
+  };
+  const p = palettes[variant];
+  const uid = `pin3d_${variant}_${index}_${Math.floor(Math.random() * 10000)}`;
+
+  return `
+    <div style="position:relative;width:38px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-18px);filter:drop-shadow(0 6px 8px ${p.glow});transition:transform 0.2s;">
+      <span style="position:absolute;bottom:1px;width:18px;height:7px;border-radius:9999px;background:${p.mid};opacity:0.55;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>
+      <svg width="36" height="44" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="${uid}_body" cx="35%" cy="25%" r="70%">
+            <stop offset="0%" stop-color="${p.light}" />
+            <stop offset="55%" stop-color="${p.mid}" />
+            <stop offset="100%" stop-color="${p.dark}" />
+          </radialGradient>
+          <linearGradient id="${uid}_rim" x1="0" y1="0" x2="64" y2="80" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="${p.dark}" stop-opacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid}_body)" stroke="url(#${uid}_rim)" stroke-width="2.2"/>
+        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.45"/>
+      </svg>
+    </div>
+  `;
+};
+
 const PatrolTruckHologram: React.FC<{ small?: boolean }> = ({ small = false }) => (
   <div className={`relative flex items-center justify-center ${small ? 'w-16 h-11' : 'w-48 h-24 mx-auto'}`}>
     <img
@@ -123,14 +157,13 @@ interface BeveledBarItem {
   porcentaje: number;
 }
 
-// Componente reutilizable para el Gráfico 3D Biselado en la Vista Previa
+// Gráfico 3D Biselado sin números delante y con margen derecho amplio para no recortar porcentajes
 const BeveledHorizontalBarChart: React.FC<{
   title: string;
   subtitle: string;
   items: BeveledBarItem[];
 }> = ({ title, subtitle, items }) => {
   const maxVal = Math.max(...items.map((i) => i.count), 1);
-  // Calcular escala limpia de 5 pasos
   const rawStep = maxVal / 5;
   const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
   const niceStep = Math.ceil(rawStep / magnitude) * magnitude || 1;
@@ -145,41 +178,38 @@ const BeveledHorizontalBarChart: React.FC<{
       </div>
 
       <div className="relative">
-        {/* Filas de barras */}
         <div className="space-y-2.5 relative z-10">
-          {items.map((item, idx) => {
+          {items.map((item) => {
             const widthPct = Math.min(100, Math.max((item.count / scaleMax) * 100, 1.5));
             return (
               <div key={item.label} className="grid grid-cols-12 items-center gap-2">
                 <div
                   className="col-span-4 sm:col-span-3 text-right font-bold text-[10px] sm:text-[11px] text-slate-800 truncate pr-1"
-                  title={`${idx + 1}. ${item.label}`}
+                  title={item.label}
                 >
-                  {idx + 1}. {item.label}
+                  {item.label}
                 </div>
-                <div className="col-span-8 sm:col-span-9 flex items-center gap-2 relative">
-                  {/* Líneas verticales punteadas de guía */}
-                  <div className="flex-1 relative h-5 flex items-center">
-                    <div className="absolute inset-0 flex justify-between pointer-events-none">
-                      {ticks.map((t) => (
-                        <div key={t} className="h-full border-r border-dashed border-slate-300/80" />
-                      ))}
-                    </div>
-
-                    {/* Barra 3D biselada azul/celeste idéntica a la imagen de referencia */}
-                    <div
-                      className="relative h-4 rounded-r-md rounded-l-xs border border-[#1e3a8a] shadow-[0_2px_0_#0f172a] overflow-hidden transition-all"
-                      style={{ width: `${widthPct}%` }}
-                    >
-                      <div className="h-1/2 w-full bg-[#38bdf8]" />
-                      <div className="h-1/2 w-full bg-[#1d4ed8]" />
-                    </div>
-
-                    {/* Etiqueta de casos y porcentaje a la derecha */}
-                    <span className="ml-2 text-[10px] font-bold text-slate-800 whitespace-nowrap shrink-0">
-                      {item.count.toLocaleString()} casos ({item.porcentaje.toFixed(2)}%)
-                    </span>
+                <div className="col-span-8 sm:col-span-9 pr-32 sm:pr-36 relative h-5 flex items-center">
+                  {/* Líneas verticales punteadas de escala */}
+                  <div className="absolute inset-y-0 left-0 right-32 sm:right-36 flex justify-between pointer-events-none">
+                    {ticks.map((t) => (
+                      <div key={t} className="h-full border-r border-dashed border-slate-300/80" />
+                    ))}
                   </div>
+
+                  {/* Barra 3D biselada azul/celeste */}
+                  <div
+                    className="relative h-4 rounded-r-md rounded-l-xs border border-[#1e3a8a] shadow-[0_2px_0_#0f172a] overflow-hidden shrink-0"
+                    style={{ width: `${widthPct}%` }}
+                  >
+                    <div className="h-1/2 w-full bg-[#38bdf8]" />
+                    <div className="h-1/2 w-full bg-[#1d4ed8]" />
+                  </div>
+
+                  {/* Etiqueta completa de casos y porcentaje sin cortes */}
+                  <span className="ml-2 text-[10px] font-bold text-slate-800 whitespace-nowrap shrink-0">
+                    {item.count.toLocaleString()} casos ({item.porcentaje.toFixed(2)}%)
+                  </span>
                 </div>
               </div>
             );
@@ -189,7 +219,7 @@ const BeveledHorizontalBarChart: React.FC<{
         {/* Eje numérico inferior */}
         <div className="grid grid-cols-12 gap-2 mt-2 pt-1 border-t border-slate-300">
           <div className="col-span-4 sm:col-span-3" />
-          <div className="col-span-8 sm:col-span-9 pr-24 flex justify-between text-[9px] font-mono text-slate-500">
+          <div className="col-span-8 sm:col-span-9 pr-32 sm:pr-36 flex justify-between text-[9px] font-mono text-slate-500">
             {ticks.map((t) => (
               <span key={t}>{t.toLocaleString()}</span>
             ))}
@@ -214,6 +244,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
+
+  // Estado para agrandar el mapa a pantalla completa
+  const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -350,7 +383,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, [recordsInScope]);
 
-  // 1. Tabla de Frecuencias Consolidadas
   const todasFrecuenciasModalidades = useMemo(() => {
     const counts: Record<string, number> = {};
     recordsInScope.forEach((r) => {
@@ -375,7 +407,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       });
   }, [recordsInScope]);
 
-  // 2. Cuadro Anual Comparativo por Meses (Ene - Dic) + Ranking Mensual Descendente para el gráfico
   const matrizAnualPorMeses = useMemo(() => {
     const mapMod = new Map<string, number[]>();
     const totalesMes = Array(12).fill(0);
@@ -405,7 +436,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       })
       .sort((a, b) => b.total - a.total);
 
-    // Meses ordenados de mayor a menor volumen operativo (como la imagen de referencia)
     const rankingMensualDescendente: BeveledBarItem[] = MESES_LARGOS.map((nombreMes, idx) => ({
       label: nombreMes,
       count: totalesMes[idx],
@@ -430,7 +460,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     [todasFrecuenciasModalidades]
   );
 
-  // Función helper vectorial para dibujar el Gráfico 3D Biselado Azul/Celeste dentro del PDF
+  // Dibujar Gráfico 3D Biselado en PDF sin números delante y con margen derecho amplio
   const drawBeveledChartInPdf = (
     doc: any,
     startY: number,
@@ -447,12 +477,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     const footerHeight = 7;
     const boxHeight = headerHeight + displayItems.length * rowHeight + footerHeight;
 
-    // Fondo gris claro sutil y borde
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(203, 213, 225);
     doc.roundedRect(marginX, startY, boxWidth, boxHeight, 2, 2, 'FD');
 
-    // Títulos del gráfico
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(15, 23, 42);
@@ -474,14 +502,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       { align: 'center' }
     );
 
-    const labelColW = 54;
-    const valueTextColW = 34;
+    const labelColW = 50;
+    const valueTextColW = 44;
     const plotX = marginX + labelColW + 2;
     const plotW = boxWidth - labelColW - valueTextColW - 6;
     const plotTopY = startY + headerHeight;
     const plotBottomY = plotTopY + displayItems.length * rowHeight;
 
-    // Líneas verticales guía de escala
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.2);
     for (let s = 0; s <= 5; s++) {
@@ -492,39 +519,32 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       doc.text((niceStep * s).toLocaleString(), gx, plotBottomY + 4, { align: 'center' });
     }
 
-    // Dibujar cada barra 3D biselada
     displayItems.forEach((item, idx) => {
       const rowY = plotTopY + idx * rowHeight;
       const barY = rowY + 1.1;
       const barH = 4.2;
       const barW = Math.max(1.5, (item.count / scaleMax) * plotW);
 
-      // Etiqueta izquierda: "1. ABRIL"
+      // Solo el nombre limpio sin número adelante
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(30, 41, 59);
-      const cleanLabel = `${idx + 1}. ${item.label}`;
-      const truncatedLabel = cleanLabel.length > 30 ? `${cleanLabel.slice(0, 29)}…` : cleanLabel;
+      const truncatedLabel = item.label.length > 28 ? `${item.label.slice(0, 27)}…` : item.label;
       doc.text(truncatedLabel, plotX - 2.5, barY + 3.1, { align: 'right' });
 
-      // Sombra inferior oscura
       doc.setFillColor(15, 23, 42);
       doc.rect(plotX, barY + barH - 0.3, barW, 0.7, 'F');
 
-      // Mitad superior celeste luminoso (#38bdf8)
       doc.setFillColor(56, 189, 248);
       doc.rect(plotX, barY, barW, barH / 2, 'F');
 
-      // Mitad inferior azul rey (#1d4ed8)
       doc.setFillColor(29, 78, 216);
       doc.rect(plotX, barY + barH / 2, barW, barH / 2, 'F');
 
-      // Contorno azul marino (#1e3a8a)
       doc.setDrawColor(30, 58, 138);
       doc.setLineWidth(0.25);
       doc.rect(plotX, barY, barW, barH, 'S');
 
-      // Texto de casos y porcentaje a la derecha
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.8);
       doc.setTextColor(15, 23, 42);
@@ -538,7 +558,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     return startY + boxHeight;
   };
 
-  // Descarga PDF oficial con Gráfico 3D Biselado + Tabla
   const handleDownloadPdfFromPreview = async () => {
     setExportingPdf(true);
     try {
@@ -577,7 +596,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         minute: '2-digit'
       });
 
-      // Encabezado Institucional
       doc.setFillColor(8, 32, 64);
       doc.rect(0, 0, pageWidth, 26, 'F');
       doc.setTextColor(255, 255, 255);
@@ -595,7 +613,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         21.2
       );
 
-      // Caja de Sector Consolidado
       doc.setDrawColor(6, 182, 212);
       doc.setFillColor(240, 249, 255);
       doc.roundedRect(14, 29, pageWidth - 28, 18, 2, 2, 'FD');
@@ -617,7 +634,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       doc.text(lineasVariantes.slice(0, 2), 18, 44);
 
       if (!isAnual) {
-        // MODO 1: GRÁFICO 3D BISELADO TOP MODALIDADES + TABLA DE FRECUENCIA
         const chartItems: BeveledBarItem[] = todasFrecuenciasModalidades.slice(0, 10).map((m) => ({
           label: m.modalidad,
           count: m.count,
@@ -667,7 +683,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           margin: { left: 14, right: 14, bottom: 14 }
         });
       } else {
-        // MODO 2: TABLA ANUAL DE 12 MESES + GRÁFICO 3D BISELADO DE EVOLUCIÓN MENSUAL
         const headAnual = [['N°', 'MODALIDAD DE INCIDENCIA', ...MESES_CORTOS, 'TOTAL', '%']];
         const bodyAnual = matrizAnualPorMeses.filas.map((f, idx) => [
           idx + 1,
@@ -725,7 +740,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         );
       }
 
-      // Pie de página en todas las hojas con créditos del desarrollador
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -817,33 +831,69 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
+  // Reajustar el tamaño del canvas de MapLibre cuando se expande/contrae a pantalla completa
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const timer = setTimeout(() => {
+      map.resize();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [isMapExpanded]);
+
+  // Renderizar Pines 3D volumétricos de distintos colores según criticidad de incidencia
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
     if (!map || !maplibregl) return;
 
     const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 65, bearing: -28, speed: 1.4 });
+    map.flyTo({ center: [lng, lat], zoom: isMapExpanded ? 16.6 : 16.1, pitch: 65, bearing: -28, speed: 1.4 });
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const count = Math.min(Math.max(recordsInScope.length, 4), 14);
+    const maxPins = isMapExpanded ? 24 : 14;
+    const count = Math.min(Math.max(recordsInScope.length, 4), maxPins);
+
     for (let i = 0; i < count; i++) {
       const r: any = recordsInScope[i] || {};
       const parsedLat = parseFloat(r.lat || r.latitud);
       const parsedLng = parseFloat(r.lng || r.longitud);
-      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * 0.0026;
-      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * 0.0020;
+      const radiusSpread = isMapExpanded ? 0.0038 : 0.0026;
+      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * radiusSpread;
+      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * (radiusSpread * 0.78);
+
+      const mod = getModalidad(r);
+      let variant: 'BLUE' | 'RED' | 'AMBER' | 'EMERALD' = 'BLUE';
+      if (mod.includes('ROBO') || mod.includes('HURTO') || mod.includes('DROGA') || mod.includes('VIOLENCIA') || i % 4 === 0) {
+        variant = 'RED';
+      } else if (mod.includes('ALCOHOL') || mod.includes('ALTERACION') || mod.includes('RUIDO') || i % 4 === 1) {
+        variant = 'AMBER';
+      } else if (mod.includes('AUXILIO') || mod.includes('APOYO') || mod.includes('ACCIDENTE') || i % 4 === 2) {
+        variant = 'EMERALD';
+      }
 
       const el = document.createElement('div');
-      const color = i % 3 === 0 ? '#f43f5e' : i % 3 === 1 ? '#f59e0b' : '#22d3ee';
-      el.innerHTML = `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:28px;height:28px;"><span style="position:absolute;width:28px;height:28px;border-radius:9999px;background:${color};opacity:0.45;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span><span style="width:12px;height:12px;border-radius:9999px;background:${color};box-shadow:0 0 16px ${color};border:2px solid #fff;"></span></div>`;
+      el.innerHTML = create3DPinHtml(variant, i);
 
-      const marker = new maplibregl.Marker({ element: el }).setLngLat([offsetLng, offsetLat]).addTo(map);
+      const popupHtml = `
+        <div style="font-family:monospace;font-size:11px;color:#0f172a;padding:2px 4px;max-width:210px;">
+          <div style="font-weight:900;color:#0369a1;margin-bottom:2px;">${mod}</div>
+          <div><strong>Lugar:</strong> ${getUrbanizacion(r) || activeTitle}</div>
+          <div><strong>Turno:</strong> ${getTurno(r)} | <strong>Móvil:</strong> ${getVehiculo(r)}</div>
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({ offset: 28, closeButton: false }).setHTML(popupHtml);
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([offsetLng, offsetLat])
+        .setPopup(popup)
+        .addTo(map);
+
       markersRef.current.push(marker);
     }
-  }, [activeTitle, recordsInScope, mapReady]);
+  }, [activeTitle, recordsInScope, mapReady, isMapExpanded]);
 
   const handleTurnoClick = (turno: string) => {
     const next = selectedTurno === turno ? 'TODOS' : turno;
@@ -934,8 +984,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* COLUMNA IZQUIERDA */}
-          <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.15)]">
+          <aside className="lg:col-span-3 flex flex-col gap-3">
+            {/* PANEL SECTORIZACIÓN / AGRUPAR */}
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.15)]">
               <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-4 border-l-4 border-fuchsia-400 rounded-tl-xl pointer-events-none" />
               <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl pointer-events-none" />
 
@@ -965,7 +1016,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 )}
               </div>
 
-              <div className="mb-2.5 p-2 rounded-lg bg-[#030c1a] border border-amber-400/50">
+              <div className="mb-2 p-2 rounded-lg bg-[#030c1a] border border-amber-400/50">
                 <label className="text-[9px] font-mono font-bold text-amber-300 uppercase flex items-center gap-1 mb-1">
                   <Edit3 className="w-3 h-3" /> NOMBRE OFICIAL EN RESUMEN / PDF:
                 </label>
@@ -989,14 +1040,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               )}
 
               {activeUrbsList.length > 1 && (
-                <div className="mb-2 p-2 rounded-lg bg-cyan-950/70 border border-cyan-400/50">
+                <div className="mb-2 p-1.5 rounded-lg bg-cyan-950/70 border border-cyan-400/50">
                   <div className="flex items-center justify-between text-[9px] font-mono text-cyan-200 mb-1">
-                    <span>INCLUIDOS EN EL REPORTE ({activeUrbsList.length}):</span>
+                    <span>INCLUIDOS ({activeUrbsList.length}):</span>
                     <button onClick={() => selectSingleUrb(activeUrbsList[0])} className="text-amber-300 underline cursor-pointer">
                       LIMPIAR
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-1 max-h-14 overflow-y-auto">
+                  <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto">
                     {activeUrbsList.map((name) => (
                       <span
                         key={name}
@@ -1010,7 +1061,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1.5 max-h-[210px] overflow-y-auto pr-1">
+              <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
                 {filteredUrbanizaciones.map((urb) => {
                   const isChecked = activeUrbsList.includes(urb.nombre);
                   return (
@@ -1040,57 +1091,82 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RANGO DE TURNOS */}
-            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.12)]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-mono font-black tracking-wider text-cyan-200 uppercase">RANGO DE TURNOS</h3>
-                {selectedTurno !== 'TODOS' && (
-                  <button onClick={() => handleTurnoClick(selectedTurno)} className="text-[10px] font-mono text-amber-300 underline cursor-pointer">
-                    TODOS
+            {/* RANGO DE TURNOS AGRANDADO Y RESALTADO */}
+            <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-4 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-mono font-black tracking-wider text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+                  RANGO DE TURNOS
+                </h3>
+                {selectedTurno !== 'TODOS' ? (
+                  <button onClick={() => handleTurnoClick(selectedTurno)} className="text-[10px] font-mono text-amber-300 underline font-bold cursor-pointer">
+                    VER TODOS
                   </button>
+                ) : (
+                  <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/90 border border-cyan-400/50 px-2 py-0.5 rounded">
+                    FILTRO ACTIVO
+                  </span>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2.5 text-center">
+
+              <div className="grid grid-cols-3 gap-2.5 text-center my-auto">
                 {[
-                  { label: 'MAÑANA', pct: hudData.pctManana, color: '#10b981', glow: 'rgba(16,185,129,0.45)' },
-                  { label: 'TARDE', pct: hudData.pctTarde, color: '#22d3ee', glow: 'rgba(34,211,238,0.45)' },
-                  { label: 'NOCHE', pct: hudData.pctNoche, color: '#ec4899', glow: 'rgba(236,72,153,0.45)' }
+                  { label: 'MAÑANA', pct: hudData.pctManana, count: hudData.turnosCount.MAÑANA, color: '#10b981', glow: 'rgba(16,185,129,0.55)' },
+                  { label: 'TARDE', pct: hudData.pctTarde, count: hudData.turnosCount.TARDE, color: '#22d3ee', glow: 'rgba(34,211,238,0.55)' },
+                  { label: 'NOCHE', pct: hudData.pctNoche, count: hudData.turnosCount.NOCHE, color: '#ec4899', glow: 'rgba(236,72,153,0.55)' }
                 ].map((t) => {
                   const active = selectedTurno === t.label;
-                  const r = 30;
+                  const r = 38;
                   const circ = 2 * Math.PI * r;
                   const offset = circ - (t.pct / 100) * circ;
                   return (
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`p-2 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition ${
-                        active ? 'bg-cyan-500/30 border-cyan-300' : 'bg-[#030b17] border-cyan-500/35 hover:border-cyan-400'
+                      className={`py-3.5 px-1.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-center transition-all ${
+                        active
+                          ? 'bg-cyan-500/30 border-cyan-200 scale-[1.03]'
+                          : 'bg-[#030b17]/90 border-cyan-500/40 hover:border-cyan-300 hover:bg-[#061830]'
                       }`}
-                      style={{ boxShadow: active ? `0 0 22px ${t.glow}` : undefined }}
+                      style={{ boxShadow: active ? `0 0 26px ${t.glow}` : undefined }}
                     >
-                      <div className="relative w-16 h-16 flex items-center justify-center">
-                        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 72 72">
-                          <circle cx="36" cy="36" r={r} stroke="#0c2238" strokeWidth="5" fill="transparent" />
-                          <circle cx="36" cy="36" r="22" stroke={t.color} strokeWidth="2" strokeOpacity="0.6" fill={t.color} fillOpacity="0.12" />
-                          <circle cx="36" cy="36" r="14" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.4" fill="transparent" />
-                          <circle cx="36" cy="36" r={r} stroke={t.color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
+                      <div className="relative w-24 h-24 flex items-center justify-center">
+                        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 90 90">
+                          <circle cx="45" cy="45" r={r} stroke="#0c2238" strokeWidth="6" fill="transparent" />
+                          <circle cx="45" cy="45" r="28" stroke={t.color} strokeWidth="2.5" strokeOpacity="0.65" fill={t.color} fillOpacity="0.14" />
+                          <circle cx="45" cy="45" r="19" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
+                          <circle
+                            cx="45"
+                            cy="45"
+                            r={r}
+                            stroke={t.color}
+                            strokeWidth="6"
+                            strokeDasharray={circ}
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            style={{ filter: `drop-shadow(0 0 6px ${t.color})` }}
+                          />
                         </svg>
-                        <span className="absolute text-xs font-mono font-black text-white">{t.pct}%</span>
+                        <span className="absolute text-base font-mono font-black text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+                          {t.pct}%
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-cyan-100 mt-1">{t.label}</span>
+                      <span className="text-[11px] font-mono font-black text-cyan-100 mt-1.5 tracking-wider">
+                        {t.label}
+                      </span>
+                      <span className="text-[9px] font-mono text-cyan-400 font-bold">
+                        {t.count} reg
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="border border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 space-y-2">
-              <div>
-                <div className="flex justify-between text-[10px] font-mono text-cyan-200 mb-1">
-                  <span>FILTRO DENSIDAD MÍNIMA</span>
-                  <span className="text-emerald-300 font-bold">{minCasosFilter}+ CASOS</span>
-                </div>
+            {/* BARRA COMPACTA DE DENSIDAD MÍNIMA Y AGENTE LÍDER */}
+            <div className="border border-cyan-400/50 bg-[#041020]/95 rounded-lg px-3 py-2 space-y-1">
+              <div className="flex items-center gap-2 text-[9px] font-mono text-cyan-200">
+                <span className="shrink-0">MÍN. CASOS:</span>
                 <input
                   type="range"
                   min={0}
@@ -1098,12 +1174,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   step={5}
                   value={minCasosFilter}
                   onChange={(e) => setMinCasosFilter(Number(e.target.value))}
-                  className="w-full accent-emerald-400 cursor-pointer h-1.5 bg-cyan-950 rounded-lg"
+                  className="flex-1 accent-emerald-400 cursor-pointer h-1 bg-cyan-950 rounded-lg"
                 />
+                <span className="text-emerald-300 font-bold shrink-0">{minCasosFilter}+</span>
               </div>
-              <div className="pt-1.5 border-t border-cyan-500/30 flex items-center justify-between text-[10px] font-mono text-cyan-300">
+              <div className="flex items-center justify-between text-[9px] font-mono text-cyan-400/90 border-t border-cyan-500/20 pt-1">
                 <span>AGENTE LÍDER:</span>
-                <span className="text-white font-bold truncate max-w-[155px]">{hudData.topAgente}</span>
+                <span className="text-cyan-100 font-semibold truncate max-w-[165px]">{hudData.topAgente}</span>
               </div>
             </div>
           </aside>
@@ -1237,24 +1314,56 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* MAPA OSCURO CIAN */}
-            <div className="border-2 border-cyan-400/80 bg-[#020813] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]">
-              <div className="flex items-center justify-between mb-1.5 px-1">
+            {/* MAPA OSCURO CIAN CON BOTÓN DE PANTALLA COMPLETA Y PINES 3D DE COLORES */}
+            <div
+              className={
+                isMapExpanded
+                  ? 'fixed inset-3 z-50 border-2 border-cyan-300 bg-[#020813] rounded-2xl p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.7)]'
+                  : 'border-2 border-cyan-400/80 bg-[#020813] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]'
+              }
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 px-1">
                 <span className="text-xs font-mono font-black text-white uppercase flex items-center gap-2 truncate pr-2">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
                   {activeTitle}
                 </span>
-                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950 border border-emerald-400 px-2 py-0.5 rounded flex items-center gap-1 shrink-0 font-bold">
-                  <Compass className="w-3 h-3 text-emerald-300" />
-                  RADAR TÁCTICO 3D // NUEVO CHIMBOTE
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:flex text-[10px] font-mono text-emerald-300 bg-emerald-950 border border-emerald-400 px-2 py-0.5 rounded items-center gap-1 font-bold">
+                    <Compass className="w-3 h-3 text-emerald-300" />
+                    RADAR 3D // NUEVO CHIMBOTE
+                  </span>
+
+                  {/* Botón Agrandar / Salir Pantalla Completa del Mapa */}
+                  <button
+                    onClick={() => setIsMapExpanded((prev) => !prev)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)]"
+                  >
+                    {isMapExpanded ? (
+                      <>
+                        <Minimize2 className="w-3.5 h-3.5 text-amber-300" />
+                        <span>SALIR PANTALLA COMPLETA</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 className="w-3.5 h-3.5 text-cyan-200" />
+                        <span>PANTALLA COMPLETA</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div className="w-full h-56 sm:h-60 rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813]">
+              <div
+                className={`w-full rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813] ${
+                  isMapExpanded ? 'flex-1 h-full' : 'h-56 sm:h-60'
+                }`}
+              >
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/90 backdrop-blur-md rounded-lg p-2 pointer-events-none flex items-center gap-2.5">
-                  <svg className="w-12 h-12" viewBox="0 0 60 60">
+                {/* Leyenda de Pines 3D y Radar */}
+                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/92 backdrop-blur-md rounded-lg p-2.5 pointer-events-none flex items-center gap-3">
+                  <svg className="w-11 h-11 shrink-0" viewBox="0 0 60 60">
                     <rect x="2" y="2" width="56" height="56" stroke="#22d3ee" strokeWidth="1" fill="rgba(6,182,212,0.08)" />
                     <line x1="20" y1="2" x2="20" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
                     <line x1="40" y1="2" x2="40" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
@@ -1264,9 +1373,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <circle cx="32" cy="28" r="3" fill="#f59e0b" />
                   </svg>
                   <div className="text-[9px] font-mono text-cyan-100 leading-relaxed">
-                    <div>UNIDAD: <strong className="text-emerald-300">{hudData.topVehiculo}</strong></div>
-                    <div>EVENTOS: <strong className="text-amber-300">{hudData.total}</strong></div>
-                    <div className="text-cyan-400">Clic derecho: rotar 3D</div>
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />ALTA</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />MEDIA</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />PATRULLAJE</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />APOYO</span>
+                    </div>
+                    <div className="text-cyan-400">Clic en cada pin 3D para detalle • Clic derecho para girar</div>
                   </div>
                 </div>
               </div>
@@ -1385,7 +1498,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       {isPreviewOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-[#051326] border-2 border-cyan-400 rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-[0_0_60px_rgba(6,182,212,0.5)] overflow-hidden">
-            {/* Barra Superior de la Vista Previa */}
             <div className="bg-[#030b17] border-b border-cyan-500/40 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-emerald-400" />
@@ -1399,7 +1511,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Pestañas de Reportes */}
               <div className="flex items-center gap-1.5 bg-[#071930] p-1 rounded-xl border border-cyan-500/40">
                 <button
                   onClick={() => setPreviewTab('FRECUENCIA')}
@@ -1425,7 +1536,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </button>
               </div>
 
-              {/* Botón Descargar PDF o Cerrar */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDownloadPdfFromPreview}
@@ -1445,10 +1555,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Hoja Simulada A4 Blanca */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-900/90">
               <div className="bg-white text-slate-900 rounded-lg shadow-2xl p-6 max-w-5xl mx-auto border border-slate-300">
-                {/* Encabezado Institucional */}
                 <div className="bg-[#082040] text-white p-4 rounded-t-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                   <div>
                     <div className="text-sm font-black tracking-wide">MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE</div>
@@ -1461,7 +1569,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 </div>
 
-                {/* Caja de Sector Consolidado */}
                 <div className="bg-sky-50 border border-sky-300 p-3.5 mt-3 mb-4 rounded">
                   <div className="text-[10px] font-bold text-sky-900 uppercase">SECTOR / JURISDICCIÓN CONSOLIDADA:</div>
                   <div className="text-base font-black text-sky-950">{activeTitle}</div>
@@ -1472,7 +1579,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
                 {previewTab === 'FRECUENCIA' ? (
                   <div>
-                    {/* GRÁFICO 3D BISELADO DE MODALIDADES */}
                     <BeveledHorizontalBarChart
                       title={`DISTRIBUCIÓN DE MODALIDADES EN ${activeTitle}`}
                       subtitle="Distribución de incidencias registradas en orden descendente de volumen operativo"
@@ -1483,7 +1589,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       }))}
                     />
 
-                    {/* TABLA DE FRECUENCIA */}
                     <h4 className="text-xs font-black text-slate-800 uppercase mb-2">
                       TABLA DE FRECUENCIA CONSOLIDADA POR MODALIDAD
                     </h4>
@@ -1521,7 +1626,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 ) : (
                   <div>
-                    {/* TABLA ANUAL COMPARATIVA POR MESES */}
                     <h4 className="text-xs font-black text-slate-800 uppercase mb-2">
                       CUADRO ANUAL COMPARATIVO DE FRECUENCIA POR MESES (ENE - DIC)
                     </h4>
@@ -1578,7 +1682,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       </table>
                     </div>
 
-                    {/* GRÁFICO 3D BISELADO DE EVOLUCIÓN MENSUAL EN ORDEN DESCENDENTE */}
                     <BeveledHorizontalBarChart
                       title={`EVOLUCIÓN MENSUAL DE INCIDENCIAS OPERATIVAS - ${activeTitle}`}
                       subtitle="Distribución de atenciones registradas por mes en orden descendente de volumen operativo"
@@ -1587,7 +1690,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
-                {/* Pie de página institucional con créditos del desarrollador */}
                 <div className="mt-5 pt-2.5 border-t border-slate-300 flex flex-col sm:flex-row justify-between text-[10px] text-slate-500 font-mono">
                   <span>Sistema de Ciber-Monitoreo Serenazgo Nuevo Chimbote</span>
                   <span className="font-bold text-slate-700">Desarrollado por: Arturo David Rivero Onofre (ADRO)</span>
