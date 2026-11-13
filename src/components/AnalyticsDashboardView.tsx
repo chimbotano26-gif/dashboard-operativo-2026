@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
   Square, Layers, X, Compass, RotateCcw, Activity, FileDown,
-  Edit3, Eye, CalendarRange, Maximize2, Minimize2
+  Edit3, Eye, CalendarRange, Maximize2, Minimize2, Sun, Moon, Navigation
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -108,21 +108,35 @@ const getSectorCenter = (title: string): [number, number] => {
   return [-78.5265, -9.1265];
 };
 
-// Generador de Pin 3D volumétrico con aro hueco y brillo especular (estilo referencia 3D)
-const create3DPinHtml = (variant: 'BLUE' | 'RED' | 'AMBER' | 'EMERALD', index: number): string => {
+type PinVariant = 'BLUE' | 'RED' | 'AMBER' | 'EMERALD';
+
+interface CriticalMapPoint {
+  id: string;
+  index: number;
+  lng: number;
+  lat: number;
+  modalidad: string;
+  lugar: string;
+  turno: string;
+  vehiculo: string;
+  variant: PinVariant;
+}
+
+const create3DPinHtml = (variant: PinVariant, index: number, isSelected: boolean): string => {
   const palettes = {
-    BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1', glow: 'rgba(14,165,233,0.75)' },
-    RED: { light: '#fda4af', mid: '#f43f5e', dark: '#9f1239', glow: 'rgba(244,63,94,0.8)' },
-    AMBER: { light: '#fde047', mid: '#f59e0b', dark: '#b45309', glow: 'rgba(245,158,11,0.8)' },
-    EMERALD: { light: '#6ee7b7', mid: '#10b981', dark: '#047857', glow: 'rgba(16,185,129,0.75)' }
+    BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1', glow: 'rgba(14,165,233,0.85)' },
+    RED: { light: '#fda4af', mid: '#f43f5e', dark: '#9f1239', glow: 'rgba(244,63,94,0.9)' },
+    AMBER: { light: '#fde047', mid: '#f59e0b', dark: '#b45309', glow: 'rgba(245,158,11,0.9)' },
+    EMERALD: { light: '#6ee7b7', mid: '#10b981', dark: '#047857', glow: 'rgba(16,185,129,0.85)' }
   };
   const p = palettes[variant];
   const uid = `pin3d_${variant}_${index}_${Math.floor(Math.random() * 10000)}`;
+  const scale = isSelected ? 'scale(1.32)' : 'scale(1)';
 
   return `
-    <div style="position:relative;width:38px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-18px);filter:drop-shadow(0 6px 8px ${p.glow});transition:transform 0.2s;">
-      <span style="position:absolute;bottom:1px;width:18px;height:7px;border-radius:9999px;background:${p.mid};opacity:0.55;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>
-      <svg width="36" height="44" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div style="position:relative;width:40px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-20px) ${scale};filter:drop-shadow(0 6px 10px ${p.glow});transition:transform 0.22s ease;">
+      <span style="position:absolute;bottom:1px;width:${isSelected ? '26px' : '18px'};height:8px;border-radius:9999px;background:${p.mid};opacity:0.7;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>
+      <svg width="38" height="46" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="${uid}_body" cx="35%" cy="25%" r="70%">
             <stop offset="0%" stop-color="${p.light}" />
@@ -130,12 +144,12 @@ const create3DPinHtml = (variant: 'BLUE' | 'RED' | 'AMBER' | 'EMERALD', index: n
             <stop offset="100%" stop-color="${p.dark}" />
           </radialGradient>
           <linearGradient id="${uid}_rim" x1="0" y1="0" x2="64" y2="80" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
-            <stop offset="100%" stop-color="${p.dark}" stop-opacity="0.9" />
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+            <stop offset="100%" stop-color="${p.dark}" stop-opacity="0.95" />
           </linearGradient>
         </defs>
-        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid}_body)" stroke="url(#${uid}_rim)" stroke-width="2.2"/>
-        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.45"/>
+        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid}_body)" stroke="url(#${uid}_rim)" stroke-width="${isSelected ? '3.2' : '2.2'}"/>
+        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.55"/>
       </svg>
     </div>
   `;
@@ -157,7 +171,6 @@ interface BeveledBarItem {
   porcentaje: number;
 }
 
-// Gráfico 3D Biselado sin números delante y con margen derecho amplio para no recortar porcentajes
 const BeveledHorizontalBarChart: React.FC<{
   title: string;
   subtitle: string;
@@ -190,14 +203,12 @@ const BeveledHorizontalBarChart: React.FC<{
                   {item.label}
                 </div>
                 <div className="col-span-8 sm:col-span-9 pr-32 sm:pr-36 relative h-5 flex items-center">
-                  {/* Líneas verticales punteadas de escala */}
                   <div className="absolute inset-y-0 left-0 right-32 sm:right-36 flex justify-between pointer-events-none">
                     {ticks.map((t) => (
                       <div key={t} className="h-full border-r border-dashed border-slate-300/80" />
                     ))}
                   </div>
 
-                  {/* Barra 3D biselada azul/celeste */}
                   <div
                     className="relative h-4 rounded-r-md rounded-l-xs border border-[#1e3a8a] shadow-[0_2px_0_#0f172a] overflow-hidden shrink-0"
                     style={{ width: `${widthPct}%` }}
@@ -206,7 +217,6 @@ const BeveledHorizontalBarChart: React.FC<{
                     <div className="h-1/2 w-full bg-[#1d4ed8]" />
                   </div>
 
-                  {/* Etiqueta completa de casos y porcentaje sin cortes */}
                   <span className="ml-2 text-[10px] font-bold text-slate-800 whitespace-nowrap shrink-0">
                     {item.count.toLocaleString()} casos ({item.porcentaje.toFixed(2)}%)
                   </span>
@@ -216,7 +226,6 @@ const BeveledHorizontalBarChart: React.FC<{
           })}
         </div>
 
-        {/* Eje numérico inferior */}
         <div className="grid grid-cols-12 gap-2 mt-2 pt-1 border-t border-slate-300">
           <div className="col-span-4 sm:col-span-3" />
           <div className="col-span-8 sm:col-span-9 pr-32 sm:pr-36 flex justify-between text-[9px] font-mono text-slate-500">
@@ -245,12 +254,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
-  // Estado para agrandar el mapa a pantalla completa
+  // Estados del Mapa 3D: Pantalla Completa, Estilo Nítido vs Nocturno y Punto Crítico Activo
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
+  const [mapClearMode, setMapClearMode] = useState<boolean>(true);
+  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersMapRef = useRef>(new Map());
   const [mapReady, setMapReady] = useState<boolean>(false);
 
   const urbanizaciones = useMemo(() => {
@@ -319,6 +330,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     setCustomGroupName('');
     setSelectedTurno('TODOS');
     setMinCasosFilter(0);
+    setSelectedPinId(null);
     if (onFilterZona) onFilterZona('');
     if (onFilterTurno) onFilterTurno('TODOS');
   };
@@ -330,6 +342,46 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       return matchUrb && matchTurno;
     });
   }, [records, activeUrbsList, selectedTurno]);
+
+  // Lista calculada de puntos críticos geolocalizados para salto rápido en el mapa
+  const criticalPoints = useMemo<CriticalMapPoint[]>(() => {
+    const [lng, lat] = getSectorCenter(activeTitle);
+    const maxPins = isMapExpanded ? 24 : 14;
+    const count = Math.min(Math.max(recordsInScope.length, 4), maxPins);
+    const radiusSpread = isMapExpanded ? 0.0042 : 0.0028;
+
+    const list: CriticalMapPoint[] = [];
+    for (let i = 0; i < count; i++) {
+      const r: any = recordsInScope[i] || {};
+      const parsedLat = parseFloat(r.lat || r.latitud);
+      const parsedLng = parseFloat(r.lng || r.longitud);
+      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * radiusSpread;
+      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * (radiusSpread * 0.78);
+
+      const mod = getModalidad(r);
+      let variant: PinVariant = 'BLUE';
+      if (mod.includes('ROBO') || mod.includes('HURTO') || mod.includes('DROGA') || mod.includes('VIOLENCIA') || i % 4 === 0) {
+        variant = 'RED';
+      } else if (mod.includes('ALCOHOL') || mod.includes('ALTERACION') || mod.includes('RUIDO') || i % 4 === 1) {
+        variant = 'AMBER';
+      } else if (mod.includes('AUXILIO') || mod.includes('APOYO') || mod.includes('ACCIDENTE') || i % 4 === 2) {
+        variant = 'EMERALD';
+      }
+
+      list.push({
+        id: `pt_${i}_${mod}`,
+        index: i + 1,
+        lng: offsetLng,
+        lat: offsetLat,
+        modalidad: mod,
+        lugar: getUrbanizacion(r) || activeTitle,
+        turno: getTurno(r),
+        vehiculo: getVehiculo(r),
+        variant
+      });
+    }
+    return list;
+  }, [recordsInScope, activeTitle, isMapExpanded]);
 
   const hudData = useMemo(() => {
     const total = recordsInScope.length;
@@ -460,7 +512,32 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     [todasFrecuenciasModalidades]
   );
 
-  // Dibujar Gráfico 3D Biselado en PDF sin números delante y con margen derecho amplio
+  // Vuelo automático rápido al punto crítico seleccionado
+  const handleFlyToPoint = (pt: CriticalMapPoint) => {
+    setSelectedPinId(pt.id);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    map.flyTo({
+      center: [pt.lng, pt.lat],
+      zoom: 17.6,
+      pitch: 65,
+      bearing: -20,
+      speed: 2.3,
+      curve: 1.2,
+      essential: true
+    });
+
+    markersMapRef.current.forEach((marker, id) => {
+      const popup = marker.getPopup();
+      if (id === pt.id) {
+        if (popup && !popup.isOpen()) marker.togglePopup();
+      } else if (popup && popup.isOpen()) {
+        marker.togglePopup();
+      }
+    });
+  };
+
   const drawBeveledChartInPdf = (
     doc: any,
     startY: number,
@@ -525,7 +602,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       const barH = 4.2;
       const barW = Math.max(1.5, (item.count / scaleMax) * plotW);
 
-      // Solo el nombre limpio sin número adelante
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(30, 41, 59);
@@ -805,18 +881,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           ]
         },
         center: getSectorCenter(activeTitle),
-        zoom: 16.0,
-        pitch: 65,
-        bearing: -28,
+        zoom: 16.2,
+        pitch: 62,
+        bearing: -25,
         antialias: true
       });
 
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.on('load', () => {
-        const canvas = map.getCanvas();
-        if (canvas) {
-          canvas.style.filter = 'invert(94%) hue-rotate(185deg) brightness(92%) contrast(140%) saturate(150%)';
-        }
         if (isMounted) setMapReady(true);
       });
       mapInstanceRef.current = map;
@@ -831,7 +903,22 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
-  // Reajustar el tamaño del canvas de MapLibre cuando se expande/contrae a pantalla completa
+  // Aplicar filtro visual nítido para leer calles/avenidas con total claridad
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const canvas = map.getCanvas();
+    if (!canvas) return;
+
+    if (mapClearMode) {
+      // Modo calles ultra nítidas con contraste alto para leer cada calle y parque
+      canvas.style.filter = 'brightness(104%) contrast(125%) saturate(135%)';
+    } else {
+      // Modo radar nocturno cian iluminado (sin oscurecer las letras)
+      canvas.style.filter = 'invert(90%) hue-rotate(185deg) brightness(115%) contrast(155%) saturate(160%)';
+    }
+  }, [mapClearMode, mapReady]);
+
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -841,59 +928,51 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     return () => clearTimeout(timer);
   }, [isMapExpanded]);
 
-  // Renderizar Pines 3D volumétricos de distintos colores según criticidad de incidencia
+  // Renderizar Pines 3D interactivos con salto automático al hacer clic
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
     if (!map || !maplibregl) return;
 
-    const [lng, lat] = getSectorCenter(activeTitle);
-    map.flyTo({ center: [lng, lat], zoom: isMapExpanded ? 16.6 : 16.1, pitch: 65, bearing: -28, speed: 1.4 });
+    if (!selectedPinId) {
+      const [lng, lat] = getSectorCenter(activeTitle);
+      map.flyTo({ center: [lng, lat], zoom: isMapExpanded ? 16.6 : 16.2, pitch: 62, bearing: -25, speed: 1.6 });
+    }
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    markersMapRef.current.forEach((m) => m.remove());
+    markersMapRef.current.clear();
 
-    const maxPins = isMapExpanded ? 24 : 14;
-    const count = Math.min(Math.max(recordsInScope.length, 4), maxPins);
-
-    for (let i = 0; i < count; i++) {
-      const r: any = recordsInScope[i] || {};
-      const parsedLat = parseFloat(r.lat || r.latitud);
-      const parsedLng = parseFloat(r.lng || r.longitud);
-      const radiusSpread = isMapExpanded ? 0.0038 : 0.0026;
-      const offsetLng = !isNaN(parsedLng) ? parsedLng : lng + Math.sin(i * 1.7) * radiusSpread;
-      const offsetLat = !isNaN(parsedLat) ? parsedLat : lat + Math.cos(i * 1.9) * (radiusSpread * 0.78);
-
-      const mod = getModalidad(r);
-      let variant: 'BLUE' | 'RED' | 'AMBER' | 'EMERALD' = 'BLUE';
-      if (mod.includes('ROBO') || mod.includes('HURTO') || mod.includes('DROGA') || mod.includes('VIOLENCIA') || i % 4 === 0) {
-        variant = 'RED';
-      } else if (mod.includes('ALCOHOL') || mod.includes('ALTERACION') || mod.includes('RUIDO') || i % 4 === 1) {
-        variant = 'AMBER';
-      } else if (mod.includes('AUXILIO') || mod.includes('APOYO') || mod.includes('ACCIDENTE') || i % 4 === 2) {
-        variant = 'EMERALD';
-      }
-
+    criticalPoints.forEach((pt) => {
+      const isSelected = selectedPinId === pt.id;
       const el = document.createElement('div');
-      el.innerHTML = create3DPinHtml(variant, i);
+      el.innerHTML = create3DPinHtml(pt.variant, pt.index, isSelected);
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleFlyToPoint(pt);
+      });
 
       const popupHtml = `
-        <div style="font-family:monospace;font-size:11px;color:#0f172a;padding:2px 4px;max-width:210px;">
-          <div style="font-weight:900;color:#0369a1;margin-bottom:2px;">${mod}</div>
-          <div><strong>Lugar:</strong> ${getUrbanizacion(r) || activeTitle}</div>
-          <div><strong>Turno:</strong> ${getTurno(r)} | <strong>Móvil:</strong> ${getVehiculo(r)}</div>
+        <div style="font-family:monospace;font-size:11px;color:#0f172a;padding:3px 5px;max-width:225px;">
+          <div style="font-weight:900;color:#0369a1;margin-bottom:2px;">#${pt.index} • ${pt.modalidad}</div>
+          <div><strong>Sector:</strong> ${pt.lugar}</div>
+          <div><strong>Turno:</strong> ${pt.turno} | <strong>Móvil:</strong> ${pt.vehiculo}</div>
         </div>
       `;
 
-      const popup = new maplibregl.Popup({ offset: 28, closeButton: false }).setHTML(popupHtml);
+      const popup = new maplibregl.Popup({ offset: 30, closeButton: false }).setHTML(popupHtml);
       const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([offsetLng, offsetLat])
+        .setLngLat([pt.lng, pt.lat])
         .setPopup(popup)
         .addTo(map);
 
-      markersRef.current.push(marker);
-    }
-  }, [activeTitle, recordsInScope, mapReady, isMapExpanded]);
+      if (isSelected) {
+        marker.togglePopup();
+      }
+
+      markersMapRef.current.set(pt.id, marker);
+    });
+  }, [criticalPoints, mapReady, selectedPinId, isMapExpanded]);
 
   const handleTurnoClick = (turno: string) => {
     const next = selectedTurno === turno ? 'TODOS' : turno;
@@ -985,7 +1064,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* COLUMNA IZQUIERDA */}
           <aside className="lg:col-span-3 flex flex-col gap-3">
-            {/* PANEL SECTORIZACIÓN / AGRUPAR */}
             <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 relative shadow-[inset_0_0_25px_rgba(6,182,212,0.15)]">
               <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-4 border-l-4 border-fuchsia-400 rounded-tl-xl pointer-events-none" />
               <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl pointer-events-none" />
@@ -1314,11 +1392,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* MAPA OSCURO CIAN CON BOTÓN DE PANTALLA COMPLETA Y PINES 3D DE COLORES */}
+            {/* ================================================================= */}
+            {/* MAPA NÍTIDO CON SALTO RÁPIDO ENTRE PUNTOS CRÍTICOS Y PANTALLA FULL */}
+            {/* ================================================================= */}
             <div
               className={
                 isMapExpanded
-                  ? 'fixed inset-3 z-50 border-2 border-cyan-300 bg-[#020813] rounded-2xl p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.7)]'
+                  ? 'fixed inset-3 z-50 border-2 border-cyan-300 bg-[#020813] rounded-2xl p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.75)]'
                   : 'border-2 border-cyan-400/80 bg-[#020813] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]'
               }
             >
@@ -1328,13 +1408,22 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   {activeTitle}
                 </span>
 
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:flex text-[10px] font-mono text-emerald-300 bg-emerald-950 border border-emerald-400 px-2 py-0.5 rounded items-center gap-1 font-bold">
-                    <Compass className="w-3 h-3 text-emerald-300" />
-                    RADAR 3D // NUEVO CHIMBOTE
-                  </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Botón para alternar nitidez de calles */}
+                  <button
+                    onClick={() => setMapClearMode((prev) => !prev)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-black uppercase cursor-pointer transition ${
+                      mapClearMode
+                        ? 'bg-amber-400/25 border-amber-300 text-amber-200'
+                        : 'bg-cyan-950 border-cyan-400 text-cyan-200'
+                    }`}
+                    title="Alternar entre calles ultra claras y modo radar oscuro"
+                  >
+                    {mapClearMode ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-cyan-300" />}
+                    <span>{mapClearMode ? 'CALLES NÍTIDAS' : 'RADAR OSCURO'}</span>
+                  </button>
 
-                  {/* Botón Agrandar / Salir Pantalla Completa del Mapa */}
+                  {/* Botón Agrandar / Salir Pantalla Completa */}
                   <button
                     onClick={() => setIsMapExpanded((prev) => !prev)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)]"
@@ -1356,30 +1445,69 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
               <div
                 className={`w-full rounded-lg overflow-hidden border border-cyan-400/50 relative bg-[#020813] ${
-                  isMapExpanded ? 'flex-1 h-full' : 'h-56 sm:h-60'
+                  isMapExpanded ? 'flex-1 h-full' : 'h-60 sm:h-64'
                 }`}
               >
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* Leyenda de Pines 3D y Radar */}
-                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/92 backdrop-blur-md rounded-lg p-2.5 pointer-events-none flex items-center gap-3">
-                  <svg className="w-11 h-11 shrink-0" viewBox="0 0 60 60">
-                    <rect x="2" y="2" width="56" height="56" stroke="#22d3ee" strokeWidth="1" fill="rgba(6,182,212,0.08)" />
-                    <line x1="20" y1="2" x2="20" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
-                    <line x1="40" y1="2" x2="40" y2="58" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
-                    <line x1="2" y1="20" x2="58" y2="20" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
-                    <line x1="2" y1="40" x2="58" y2="40" stroke="#22d3ee" strokeOpacity="0.35" strokeWidth="0.8" />
-                    <circle cx="32" cy="28" r="10" stroke="#f43f5e" strokeWidth="1.2" fill="rgba(244,63,94,0.2)" />
-                    <circle cx="32" cy="28" r="3" fill="#f59e0b" />
-                  </svg>
-                  <div className="text-[9px] font-mono text-cyan-100 leading-relaxed">
-                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />ALTA</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />MEDIA</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />PATRULLAJE</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />APOYO</span>
-                    </div>
-                    <div className="text-cyan-400">Clic en cada pin 3D para detalle • Clic derecho para girar</div>
+                {/* PANEL FLOTANTE DE SALTO RÁPIDO A PUNTOS CRÍTICOS */}
+                <div
+                  className={`absolute top-2 left-2 z-10 border border-cyan-400/80 bg-[#030d1c]/92 backdrop-blur-md rounded-xl p-2 shadow-xl flex flex-col ${
+                    isMapExpanded ? 'w-72 max-h-[75%]' : 'w-52 max-h-40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1 mb-1">
+                    <span className="text-[9px] font-mono font-black text-cyan-200 uppercase flex items-center gap-1">
+                      <Navigation className="w-3 h-3 text-emerald-400" />
+                      IR A PUNTO CRÍTICO ({criticalPoints.length})
+                    </span>
+                    {selectedPinId && (
+                      <button
+                        onClick={() => setSelectedPinId(null)}
+                        className="text-[8px] font-mono text-amber-300 underline cursor-pointer"
+                      >
+                        VISTA GENERAL
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="overflow-y-auto space-y-1 pr-0.5">
+                    {criticalPoints.map((pt) => {
+                      const active = selectedPinId === pt.id;
+                      const dotColor =
+                        pt.variant === 'RED'
+                          ? 'bg-rose-500'
+                          : pt.variant === 'AMBER'
+                          ? 'bg-amber-400'
+                          : pt.variant === 'EMERALD'
+                          ? 'bg-emerald-400'
+                          : 'bg-sky-400';
+
+                      return (
+                        <button
+                          key={pt.id}
+                          onClick={() => handleFlyToPoint(pt)}
+                          className={`w-full text-left px-2 py-1 rounded text-[9px] font-mono flex items-center gap-1.5 cursor-pointer transition ${
+                            active
+                              ? 'bg-cyan-500/35 border border-cyan-200 text-white font-black'
+                              : 'bg-[#071930]/80 hover:bg-cyan-900/50 text-cyan-100 border border-transparent'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                          <span className="truncate flex-1">#{pt.index} {pt.modalidad}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Leyenda inferior de colores 3D */}
+                <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/92 backdrop-blur-md rounded-lg px-2.5 py-1.5 pointer-events-none">
+                  <div className="flex flex-wrap items-center gap-2.5 text-[9px] font-mono text-cyan-100">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />ALTA</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />MEDIA</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />PATRULLAJE</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />APOYO</span>
                   </div>
                 </div>
               </div>
