@@ -64,12 +64,12 @@ const getSectorOficial = (r: any, fallbackTitle: string): string => {
     }
   }
   const t = cleanText(fallbackTitle);
-  if (t.includes('BUENOS AIRES') || t.includes('PACIFICO') || t.includes('BELLAMAR')) return 'SECTOR I - ZONA NORTE / CÉNTRICA';
+  if (t.includes('BUENOS AIRES') || t.includes('PACIFICO') || t.includes('BELLAMAR')) return 'SECTOR I - ZONA NORTE';
   if (t.includes('CASUARINAS') || t.includes('BRUCE') || t.includes('MARIATEGUI')) return 'SECTOR II - ZONA CENTRAL';
   if (t.includes('GARATEA') || t.includes('LOS HEROES') || t.includes('SAN LUIS')) return 'SECTOR III - ZONA ESTE';
   if (t.includes('3 DE OCTUBRE') || t.includes('PRADERA') || t.includes('BRISAS')) return 'SECTOR IV - ZONA SUR';
   if (t.includes('VILLA MARIA') || t.includes('1 DE MAYO')) return 'SECTOR V - ZONA OESTE';
-  return 'JURISDICCIÓN DISTRITAL NCH';
+  return 'JURISDICCIÓN NCH';
 };
 
 const getMonthIndex = (r: any): number => {
@@ -1048,6 +1048,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   );
 
   const [sectorLng, sectorLat] = useMemo(() => getSectorCenter(activeTitle), [activeTitle]);
+  const pctDistritoNum = safeRecords.length > 0 ? Number(((hudData.total / safeRecords.length) * 100).toFixed(1)) : 0;
 
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
@@ -1060,7 +1061,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER CON MÓDULO HOLOGRÁFICO AMPLIADO */}
+        {/* HEADER */}
         <header className="flex flex-col xl:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full xl:w-auto">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border-2 border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
@@ -1260,7 +1261,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RANGO DE TURNOS EXPANDIDO A ALTURA COMPLETA SIN ESPACIOS VACÍOS */}
+            {/* RANGO DE TURNOS EXPANDIDO A ALTURA COMPLETA */}
             <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-sm font-mono font-black tracking-wider text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
@@ -1691,7 +1692,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </main>
 
-          {/* COLUMNA DERECHA CON KPI DE JURISDICCIÓN / SECTOR NUEVO CHIMBOTE */}
+          {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-3">
             {/* Tarjeta 1: Incidentes por Recurso */}
             <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 flex flex-col items-center">
@@ -1755,52 +1756,75 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote */}
-            <div className="border-2 border-emerald-400/75 bg-gradient-to-br from-[#062038] via-[#041326] to-[#020914] rounded-xl p-3 flex-1 flex flex-col justify-between shadow-[0_0_25px_rgba(16,185,129,0.25),inset_0_0_20px_rgba(34,211,238,0.12)] relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1.5">
+            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote (Ocupe el 100% de la tarjeta) */}
+            <div className="border-2 border-emerald-400/75 bg-gradient-to-br from-[#072642] via-[#041428] to-[#020914] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_25px_rgba(16,185,129,0.28),inset_0_0_25px_rgba(34,211,238,0.14)] relative overflow-hidden">
+              {/* Cabecera */}
+              <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5">
                 <span className="text-[10px] font-mono font-black text-emerald-300 uppercase tracking-wider">
                   JURISDICCIÓN // NUEVO CHIMBOTE
                 </span>
-                <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/60 text-emerald-200">
-                  {safeRecords.length > 0 ? ((hudData.total / safeRecords.length) * 100).toFixed(1) : '0.0'}% DISTRITO
+                <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-emerald-500/25 border border-emerald-300 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.4)]">
+                  {pctDistritoNum}% DISTRITO
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 my-auto">
-                <div className="w-20 h-20 rounded-xl bg-[#020813] border border-cyan-400/60 flex items-center justify-center shrink-0 relative shadow-[inset_0_0_15px_rgba(34,211,238,0.2)]">
-                  <svg className="w-16 h-16" viewBox="0 0 80 80" fill="none">
-                    <line x1="20" y1="5" x2="20" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
-                    <line x1="40" y1="5" x2="40" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
-                    <line x1="60" y1="5" x2="60" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
-                    <line x1="5" y1="25" x2="75" y2="25" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
-                    <line x1="5" y1="50" x2="75" y2="50" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+              {/* Cuerpo Central Expandido (Mapa Grande + Sector Gigante) */}
+              <div className="flex items-center gap-3.5 my-auto py-2">
+                <div className="w-28 h-28 rounded-xl bg-[#020813] border-2 border-cyan-400/70 flex items-center justify-center shrink-0 relative shadow-[0_0_20px_rgba(34,211,238,0.25),inset_0_0_20px_rgba(34,211,238,0.2)]">
+                  <svg className="w-24 h-24" viewBox="0 0 80 80" fill="none">
+                    <line x1="20" y1="5" x2="20" y2="75" stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="0.8" />
+                    <line x1="40" y1="5" x2="40" y2="75" stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="0.8" />
+                    <line x1="60" y1="5" x2="60" y2="75" stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="0.8" />
+                    <line x1="5" y1="25" x2="75" y2="25" stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="0.8" />
+                    <line x1="5" y1="50" x2="75" y2="50" stroke="#22d3ee" strokeOpacity="0.22" strokeWidth="0.8" />
+                    <circle cx="40" cy="40" r="34" stroke="#22d3ee" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="3 4" />
                     <path
                       d="M18 14 L46 10 L65 24 L68 48 L52 68 L26 65 L14 44 Z"
-                      fill="rgba(16,185,129,0.16)"
+                      fill="rgba(16,185,129,0.2)"
                       stroke="#22d3ee"
-                      strokeWidth="1.8"
+                      strokeWidth="2"
                     />
                     <path
                       d="M26 24 L50 22 L56 44 L36 54 L22 40 Z"
-                      fill="rgba(34,211,238,0.14)"
+                      fill="rgba(34,211,238,0.16)"
                       stroke="#34d399"
-                      strokeWidth="1"
+                      strokeWidth="1.2"
                       strokeDasharray="3 2"
                     />
-                    <circle cx="41" cy="36" r="9" fill="rgba(245,158,11,0.28)" />
-                    <circle cx="41" cy="36" r="4" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.2" />
+                    <circle cx="41" cy="36" r="11" fill="rgba(245,158,11,0.3)" />
+                    <circle cx="41" cy="36" r="4.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" />
                   </svg>
+                  <span className="absolute top-1 left-1.5 text-[7px] font-mono text-cyan-400/80">NCH-GIS</span>
                 </div>
 
-                <div className="min-w-0 flex-1 font-mono">
-                  <div className="text-[9px] text-cyan-300 uppercase">SECTOR CORRESPONDIENTE:</div>
-                  <div className="text-xs sm:text-sm font-black text-white leading-snug line-clamp-2 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+                <div className="min-w-0 flex-1 font-mono flex flex-col justify-center">
+                  <div className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">
+                    SECTOR CORRESPONDIENTE:
+                  </div>
+                  <div className="text-xl xl:text-2xl font-black text-white leading-tight mt-0.5 break-words drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]">
                     {getSectorOficial(recordsInScope[0], activeTitle)}
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[9px]">
-                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 font-bold">
-                      {activeUrbsList.length} VARIANTE{activeUrbsList.length > 1 ? 'S' : ''} UNIFICADA{activeUrbsList.length > 1 ? 'S' : ''}
-                    </span>
+                  <div className="text-[10px] text-emerald-300 font-bold mt-1 truncate">
+                    {activeTitle}
+                  </div>
+                </div>
+              </div>
+
+              {/* Franja Inferior de 2 Indicadores que completan todo el ancho y alto */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/30 font-mono">
+                <div className="bg-[#030b17] border border-cyan-400/40 rounded-lg px-2.5 py-1.5">
+                  <div className="text-[8px] text-cyan-300 uppercase">LUGARES AGRUPADOS</div>
+                  <div className="text-xs font-black text-white mt-0.5">
+                    {activeUrbsList.length} VARIANTE{activeUrbsList.length > 1 ? 'S' : ''}
+                  </div>
+                </div>
+                <div className="bg-[#030b17] border border-emerald-400/40 rounded-lg px-2.5 py-1.5">
+                  <div className="text-[8px] text-emerald-300 uppercase">PESO EN DISTRITO</div>
+                  <div className="w-full bg-cyan-950 h-1.5 rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400"
+                      style={{ width: `${Math.min(100, Math.max(pctDistritoNum * 3, 12))}%` }}
+                    />
                   </div>
                 </div>
               </div>
