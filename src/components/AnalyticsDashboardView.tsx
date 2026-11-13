@@ -132,7 +132,7 @@ const getSectorCenter = (title: string): [number, number] => {
 };
 
 type PinVariant = 'BLUE' | 'RED' | 'AMBER' | 'EMERALD';
-type MapStyleKey = 'DARK_BLUE' | 'VOYAGER' | 'POSITRON' | 'SATELLITE';
+type MapStyleKey = 'DARK_BLUE' | 'VOYAGER' | 'ESRI_STREET' | 'SATELLITE';
 
 interface CriticalMapPoint {
   id: string;
@@ -280,7 +280,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
-  // Estados del Mapa 3D: Pantalla Completa, Selector de 4 Mapas Reales, Minimizar Lista y Filtro por Tipo de Atención
+  // Estados del Mapa 3D: Pantalla Completa, Selector de 4 Mapas 100% Gratuitos (ESRI + OSM), Minimizar Lista y Filtro por Atención
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
   const [expandedMapStyle, setExpandedMapStyle] = useState<MapStyleKey>('VOYAGER');
   const [isPointsPanelMinimized, setIsPointsPanelMinimized] = useState<boolean>(false);
@@ -378,7 +378,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     });
   }, [safeRecords, activeUrbsList, selectedTurno]);
 
-  // Lista base de puntos geolocalizados en el mapa
   const allCriticalPoints = useMemo<CriticalMapPoint[]>(() => {
     const [lng, lat] = getSectorCenter(activeTitle);
     const maxPins = isMapExpanded ? 30 : 14;
@@ -418,7 +417,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     return list;
   }, [recordsInScope, activeTitle, isMapExpanded]);
 
-  // Puntos visibles en el mapa: si se selecciona un tipo de atención, se ocultan los demás
   const visibleMapPoints = useMemo(() => {
     if (!selectedMapModalidad) return allCriticalPoints;
     return allCriticalPoints.filter((pt) => pt.modalidad === selectedMapModalidad);
@@ -571,14 +569,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     } catch (e) {}
   };
 
-  // Al marcar una atención en la lista: filtra solo ese tipo de atención, oculta el resto y vuela en 3D hacia ella
   const handleSelectIncidentTypeAndFly = (pt: CriticalMapPoint) => {
     setSelectedMapModalidad(pt.modalidad);
     setSelectedPinId(pt.id);
     flyToPinCinematic(mapInstanceRef.current, pt);
   };
 
-  // Borrar filtro del mapa y restaurar todos los pines
   const handleClearMapFilter = () => {
     setSelectedMapModalidad(null);
     setSelectedPinId(null);
@@ -898,7 +894,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     }
   };
 
-  // Inicializar MapLibre GL con 4 capas reales (Nocturno Azul Pizarra, Urbano Voyager, Gris Positron y Satélite ESRI)
+  // Inicializar MapLibre GL con 4 servidores 100% gratuitos sin clave API ni marcas de agua
   useEffect(() => {
     let isMounted = true;
     const loadMapLibre = async () => {
@@ -928,32 +924,44 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           style: {
             version: 8,
             sources: {
-              'tiles-dark': {
+              'esri-dark-base': {
                 type: 'raster',
-                tiles: ['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
                 tileSize: 256
               },
-              'tiles-voyager': {
+              'esri-dark-ref': {
                 type: 'raster',
-                tiles: ['https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
                 tileSize: 256
               },
-              'tiles-positron': {
+              'osm-voyager': {
                 type: 'raster',
-                tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
                 tileSize: 256
               },
-              'tiles-satellite': {
+              'esri-street': {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256
+              },
+              'esri-satellite': {
                 type: 'raster',
                 tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                tileSize: 256
+              },
+              'esri-sat-labels': {
+                type: 'raster',
+                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
                 tileSize: 256
               }
             },
             layers: [
-              { id: 'layer-DARK_BLUE', type: 'raster', source: 'tiles-dark', layout: { visibility: 'visible' } },
-              { id: 'layer-VOYAGER', type: 'raster', source: 'tiles-voyager', layout: { visibility: 'none' } },
-              { id: 'layer-POSITRON', type: 'raster', source: 'tiles-positron', layout: { visibility: 'none' } },
-              { id: 'layer-SATELLITE', type: 'raster', source: 'tiles-satellite', layout: { visibility: 'none' } }
+              { id: 'layer-DARK_BLUE-base', type: 'raster', source: 'esri-dark-base', layout: { visibility: 'visible' } },
+              { id: 'layer-DARK_BLUE-ref', type: 'raster', source: 'esri-dark-ref', layout: { visibility: 'visible' } },
+              { id: 'layer-VOYAGER', type: 'raster', source: 'osm-voyager', layout: { visibility: 'none' } },
+              { id: 'layer-ESRI_STREET', type: 'raster', source: 'esri-street', layout: { visibility: 'none' } },
+              { id: 'layer-SATELLITE-base', type: 'raster', source: 'esri-satellite', layout: { visibility: 'none' } },
+              { id: 'layer-SATELLITE-ref', type: 'raster', source: 'esri-sat-labels', layout: { visibility: 'none' } }
             ]
           },
           center: [-78.5265, -9.1265],
@@ -982,19 +990,25 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
-  // Cambiar instantáneamente entre los 4 estilos de mapa sin pantallas negras
+  // Alternar entre los 4 mapas gratuitos de ESRI / OpenStreetMap sin marcas de agua
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !mapReady) return;
     const activeLayer: MapStyleKey = isMapExpanded ? expandedMapStyle : 'DARK_BLUE';
-    const allLayers: MapStyleKey[] = ['DARK_BLUE', 'VOYAGER', 'POSITRON', 'SATELLITE'];
 
     try {
-      allLayers.forEach((key) => {
-        if (map.getLayer(`layer-${key}`)) {
-          map.setLayoutProperty(`layer-${key}`, 'visibility', key === activeLayer ? 'visible' : 'none');
+      const setVis = (id: string, visible: boolean) => {
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
         }
-      });
+      };
+
+      setVis('layer-DARK_BLUE-base', activeLayer === 'DARK_BLUE');
+      setVis('layer-DARK_BLUE-ref', activeLayer === 'DARK_BLUE');
+      setVis('layer-VOYAGER', activeLayer === 'VOYAGER');
+      setVis('layer-ESRI_STREET', activeLayer === 'ESRI_STREET');
+      setVis('layer-SATELLITE-base', activeLayer === 'SATELLITE');
+      setVis('layer-SATELLITE-ref', activeLayer === 'SATELLITE');
     } catch (e) {}
   }, [isMapExpanded, expandedMapStyle, mapReady]);
 
@@ -1026,7 +1040,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     } catch (e) {}
   }, [activeTitle, mapReady]);
 
-  // Renderizar únicamente los pines visibles (filtrados por tipo de atención si corresponde)
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
@@ -1297,7 +1310,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RANGO DE TURNOS EN TARJETAS HORIZONTALES APILADAS CON LETRAS GRANDES */}
+            {/* RANGO DE TURNOS EN TARJETAS HORIZONTALES APILADAS */}
             <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-3 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-mono font-black tracking-wider text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
@@ -1537,38 +1550,37 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
 
             {/* ================================================================= */}
-            {/* MAPA TÁCTICO 3D CON 4 ESTILOS REALES Y FILTRO DE ATENCIONES       */}
+            {/* MAPA TÁCTICO 3D CON 4 SERVIDORES 100% GRATUITOS SIN MARCAS DE AGUA */}
             {/* ================================================================= */}
             <div
               className={
                 isMapExpanded
-                  ? 'fixed inset-x-3 top-16 bottom-3 z-50 border-2 border-cyan-300 bg-[#041020] rounded-2xl p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
+                  ? 'fixed inset-x-2 sm:inset-x-3 top-16 bottom-2 z-50 border-2 border-cyan-300 bg-[#041020] rounded-2xl p-2.5 sm:p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
                   : 'border-2 border-cyan-400/80 bg-[#041020] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]'
               }
             >
-              {/* Barra Superior del Mapa (siempre visible debajo del Header principal) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2 px-0.5">
                 <div className="flex items-center gap-2 min-w-0">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
-                  <span className="text-xs font-mono font-black text-white uppercase truncate">
+                  <span className="text-xs font-mono font-black text-white uppercase truncate max-w-[200px] sm:max-w-xs">
                     {activeTitle}
                   </span>
                   {selectedMapModalidad && (
-                    <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/25 border border-amber-300 text-amber-200 text-[9px] font-mono font-bold">
-                      FILTRADO: {selectedMapModalidad}
+                    <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/25 border border-amber-300 text-amber-200 text-[9px] font-mono font-bold truncate max-w-[220px]">
+                      SOLO: {selectedMapModalidad}
                     </span>
                   )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {/* Selector de 4 Mapas Reales cuando está en Pantalla Completa */}
+                  {/* Selector de 4 Mapas 100% Gratuitos (ESRI + OSM) en Pantalla Completa */}
                   {isMapExpanded && (
                     <div className="flex items-center gap-1 bg-[#020813] p-1 rounded-lg border border-cyan-500/50">
-                      <MapIcon className="w-3.5 h-3.5 text-cyan-300 ml-1 mr-0.5 hidden sm:block" />
+                      <MapIcon className="w-3.5 h-3.5 text-cyan-300 ml-1 mr-0.5 hidden md:block" />
                       {[
                         { key: 'DARK_BLUE' as MapStyleKey, label: 'NOCTURNO AZUL' },
                         { key: 'VOYAGER' as MapStyleKey, label: 'URBANO CLARO' },
-                        { key: 'POSITRON' as MapStyleKey, label: 'GRIS EJECUTIVO' },
+                        { key: 'ESRI_STREET' as MapStyleKey, label: 'MAPA VIAL' },
                         { key: 'SATELLITE' as MapStyleKey, label: 'SATÉLITE 3D' }
                       ].map((m) => (
                         <button
@@ -1586,29 +1598,27 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     </div>
                   )}
 
-                  {/* Botón Borrar Filtro del Mapa si hay un tipo seleccionado */}
                   {(selectedMapModalidad || selectedPinId) && (
                     <button
                       onClick={handleClearMapFilter}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 border border-rose-300 text-rose-100 text-[10px] font-mono font-black uppercase cursor-pointer transition"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 border border-rose-300 text-rose-100 text-[9px] sm:text-[10px] font-mono font-black uppercase cursor-pointer transition"
                     >
                       <FilterX className="w-3.5 h-3.5" />
                       <span>BORRAR FILTRO ({allCriticalPoints.length})</span>
                     </button>
                   )}
 
-                  {/* Botón Agrandar / Salir Pantalla Completa */}
                   <button
                     onClick={() => {
                       setIsMapExpanded((prev) => !prev);
                       setIsPointsPanelMinimized(false);
                     }}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)]"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[9px] sm:text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)] shrink-0"
                   >
                     {isMapExpanded ? (
                       <>
                         <Minimize2 className="w-3.5 h-3.5 text-amber-300" />
-                        <span>SALIR PANTALLA COMPLETA</span>
+                        <span>SALIR</span>
                       </>
                     ) : (
                       <>
@@ -1627,7 +1637,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               >
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* LISTA DE INCIDENCIAS CON FILTRO INTELIGENTE Y OPCIÓN DE MINIMIZAR/OCULTAR */}
                 {isMapExpanded && (
                   <div
                     className={`absolute top-2 left-2 z-10 border-2 border-cyan-400/85 bg-[#051326]/95 backdrop-blur-md rounded-xl shadow-2xl transition-all ${
@@ -1715,7 +1724,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
-                {/* Tarjeta flotante ubicada debajo del encuadre del pin */}
                 {selectedPointObj && (
                   <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-10 border-2 border-cyan-300 bg-[#051326]/95 backdrop-blur-md rounded-xl px-3.5 py-2.5 min-w-[240px] max-w-sm shadow-[0_0_25px_rgba(34,211,238,0.6)]">
                     <div className="flex items-center justify-between gap-3 mb-1">
@@ -1789,7 +1797,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           {/* COLUMNA DERECHA */}
           <aside className="lg:col-span-3 flex flex-col gap-3">
-            {/* Tarjeta 1: Incidentes por Recurso */}
             <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 flex flex-col items-center">
               <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-1">INCIDENTES POR RECURSO</h3>
               <div className="relative w-44 h-44 flex items-center justify-center my-0.5">
@@ -1822,7 +1829,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Tarjeta 2: Despliegue por Unidad */}
             <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3">
               <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
               <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-1.5 mb-2.5">
@@ -1851,7 +1857,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote */}
             <div className="border-2 border-emerald-400/75 bg-gradient-to-br from-[#072642] via-[#041428] to-[#020914] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_25px_rgba(16,185,129,0.28),inset_0_0_25px_rgba(34,211,238,0.14)] relative overflow-hidden">
               <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5">
                 <span className="text-[10px] font-mono font-black text-emerald-300 uppercase tracking-wider">
