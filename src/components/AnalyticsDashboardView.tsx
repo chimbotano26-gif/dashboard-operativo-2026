@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
-  Square, Layers, X, Compass, RotateCcw, Activity, FileDown,
+  Square, Layers, X, RotateCcw, Activity, FileDown,
   Edit3, Eye, CalendarRange, Maximize2, Minimize2, Sun, Moon, Navigation
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
@@ -23,34 +23,40 @@ const cleanText = (val: any): string =>
   val === null || val === undefined ? '' : String(val).trim().replace(/\s+/g, ' ').toUpperCase();
 
 const getUrbanizacion = (r: any): string => {
+  if (!r || typeof r !== 'object') return '';
   const c = cleanText(r.urbanizacion || r.lugar || r.ubicacion || r.zona || r.sector);
   return c && c !== 'N/A' && c !== 'NULL' ? c : '';
 };
 
 const getModalidad = (r: any): string => {
+  if (!r || typeof r !== 'object') return 'SIN CLASIFICAR';
   const c = cleanText(r.tipoIncidencia || r.tipo_incidencia || r.modalidad || r.subtipo || r.incidencia || r.tipo);
   return c && c !== 'N/A' && c !== 'NULL' ? c : 'SIN CLASIFICAR';
 };
 
 const getVehiculo = (r: any): string => {
+  if (!r || typeof r !== 'object') return 'PATRULLAJE A PIE';
   const c = cleanText(r.unidadMovil || r.unidad_movil || r.vehiculo || r.movil || r.patrulla || r.unidad);
   return !c || ['N/A', 'NINGUNO', 'NULL', '-', 'SIN MOVIL', 'SIN UNIDAD'].includes(c) ? 'PATRULLAJE A PIE' : c;
 };
 
 const getAgente = (r: any): string => {
+  if (!r || typeof r !== 'object') return 'SIN ASIGNAR';
   const c = cleanText(r.efectivo || r.agente_responsable || r.agente || r.personal || r.sereno);
   return !c || ['N/A', 'NULL', '-'].includes(c) ? 'SIN ASIGNAR' : c;
 };
 
 const getTurno = (r: any): string => {
+  if (!r || typeof r !== 'object') return 'NO REGISTRADO';
   const t = cleanText(r.turno);
   if (t.includes('MAÑANA') || t.includes('MANANA')) return 'MAÑANA';
   if (t.includes('TARDE')) return 'TARDE';
-  if (t.includes('NOCHE')) return 'NOCHE';
+  if (t.includes('NOCHE')) return 'NO REGISTRADO';
   return 'NO REGISTRADO';
 };
 
 const getMonthIndex = (r: any): number => {
+  if (!r || typeof r !== 'object') return -1;
   const rawMes = cleanText(r.mes || r.month);
   if (rawMes) {
     const idx = MESES_CORTOS.findIndex((m) => rawMes.startsWith(m));
@@ -122,34 +128,28 @@ interface CriticalMapPoint {
   variant: PinVariant;
 }
 
-const create3DPinHtml = (variant: PinVariant, index: number, isSelected: boolean): string => {
+const create3DPinHtml = (variant: PinVariant, index: number): string => {
   const palettes = {
-    BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1', glow: 'rgba(14,165,233,0.85)' },
-    RED: { light: '#fda4af', mid: '#f43f5e', dark: '#9f1239', glow: 'rgba(244,63,94,0.9)' },
-    AMBER: { light: '#fde047', mid: '#f59e0b', dark: '#b45309', glow: 'rgba(245,158,11,0.9)' },
-    EMERALD: { light: '#6ee7b7', mid: '#10b981', dark: '#047857', glow: 'rgba(16,185,129,0.85)' }
+    BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1' },
+    RED: { light: '#fda4af', mid: '#f43f5e', dark: '#9f1239' },
+    AMBER: { light: '#fde047', mid: '#f59e0b', dark: '#b45309' },
+    EMERALD: { light: '#6ee7b7', mid: '#10b981', dark: '#047857' }
   };
   const p = palettes[variant];
-  const uid = `pin3d_${variant}_${index}_${Math.floor(Math.random() * 10000)}`;
-  const scale = isSelected ? 'scale(1.32)' : 'scale(1)';
+  const uid = `p3d_${variant}_${index}`;
 
   return `
-    <div style="position:relative;width:40px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-20px) ${scale};filter:drop-shadow(0 6px 10px ${p.glow});transition:transform 0.22s ease;">
-      <span style="position:absolute;bottom:1px;width:${isSelected ? '26px' : '18px'};height:8px;border-radius:9999px;background:${p.mid};opacity:0.7;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>
-      <svg width="38" height="46" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div style="position:relative;width:36px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:translateY(-18px);">
+      <svg width="36" height="44" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <radialGradient id="${uid}_body" cx="35%" cy="25%" r="70%">
+          <radialGradient id="${uid}" cx="35%" cy="25%" r="70%">
             <stop offset="0%" stop-color="${p.light}" />
             <stop offset="55%" stop-color="${p.mid}" />
             <stop offset="100%" stop-color="${p.dark}" />
           </radialGradient>
-          <linearGradient id="${uid}_rim" x1="0" y1="0" x2="64" y2="80" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
-            <stop offset="100%" stop-color="${p.dark}" stop-opacity="0.95" />
-          </linearGradient>
         </defs>
-        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid}_body)" stroke="url(#${uid}_rim)" stroke-width="${isSelected ? '3.2' : '2.2'}"/>
-        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.55"/>
+        <path d="M32 3C16.536 3 4 15.536 4 31C4 49.5 27.6 72.8 30.6 75.7C31.38 76.45 32.62 76.45 33.4 75.7C36.4 72.8 60 49.5 60 31C60 15.536 47.464 3 32 3ZM32 42C25.925 42 21 37.075 21 31C21 24.925 25.925 20 32 20C38.075 20 43 24.925 43 31C43 37.075 38.075 42 32 42Z" fill="url(#${uid})" stroke="#ffffff" stroke-width="2"/>
+        <ellipse cx="22" cy="15" rx="7" ry="3.5" transform="rotate(-32 22 15)" fill="#ffffff" fill-opacity="0.45"/>
       </svg>
     </div>
   `;
@@ -244,6 +244,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   onFilterZona,
   onFilterTurno
 }) => {
+  const safeRecords = Array.isArray(records) ? records : [];
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedUrbs, setSelectedUrbs] = useState<string[]>([]);
   const [customGroupName, setCustomGroupName] = useState<string>('');
@@ -254,26 +256,25 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
-  // Estados del Mapa 3D: Pantalla Completa, Estilo Nítido vs Nocturno y Punto Crítico Activo
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
   const [mapClearMode, setMapClearMode] = useState<boolean>(true);
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
-  const markersMapRef = useRef>(new Map());
+  const markersRef = useRef<any[]>([]);
   const [mapReady, setMapReady] = useState<boolean>(false);
 
   const urbanizaciones = useMemo(() => {
     const map = new Map<string, number>();
-    records.forEach((r) => {
+    safeRecords.forEach((r) => {
       const urb = getUrbanizacion(r);
       if (urb) map.set(urb, (map.get(urb) || 0) + 1);
     });
     return Array.from(map.entries())
       .map(([nombre, count]) => ({ nombre, count }))
       .sort((a, b) => b.count - a.count);
-  }, [records]);
+  }, [safeRecords]);
 
   const activeUrbsList = useMemo(() => {
     if (selectedUrbs.length > 0) return selectedUrbs;
@@ -297,6 +298,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   }, [urbanizaciones, searchTerm, minCasosFilter]);
 
   const toggleUrbSelection = (urbName: string) => {
+    setSelectedPinId(null);
     setSelectedUrbs((prev) => {
       const current = prev.length > 0 ? prev : activeUrbsList;
       const next = current.includes(urbName)
@@ -309,6 +311,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   };
 
   const selectSingleUrb = (urbName: string) => {
+    setSelectedPinId(null);
     setSelectedUrbs([urbName]);
     setCustomGroupName('');
     if (onFilterZona) onFilterZona(urbName);
@@ -317,6 +320,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const selectAllFiltered = () => {
     const allNames = filteredUrbanizaciones.map((u) => u.nombre);
     if (allNames.length > 0) {
+      setSelectedPinId(null);
       setSelectedUrbs(allNames);
       if (!customGroupName.trim() && searchTerm.trim()) {
         setCustomGroupName(cleanText(searchTerm));
@@ -336,14 +340,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   };
 
   const recordsInScope = useMemo(() => {
-    return records.filter((r) => {
+    return safeRecords.filter((r) => {
       const matchUrb = activeUrbsList.length === 0 || activeUrbsList.includes(getUrbanizacion(r));
       const matchTurno = selectedTurno === 'TODOS' || getTurno(r) === selectedTurno;
       return matchUrb && matchTurno;
     });
-  }, [records, activeUrbsList, selectedTurno]);
+  }, [safeRecords, activeUrbsList, selectedTurno]);
 
-  // Lista calculada de puntos críticos geolocalizados para salto rápido en el mapa
   const criticalPoints = useMemo<CriticalMapPoint[]>(() => {
     const [lng, lat] = getSectorCenter(activeTitle);
     const maxPins = isMapExpanded ? 24 : 14;
@@ -369,7 +372,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
       }
 
       list.push({
-        id: `pt_${i}_${mod}`,
+        id: `pt_${i}`,
         index: i + 1,
         lng: offsetLng,
         lat: offsetLat,
@@ -512,30 +515,29 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     [todasFrecuenciasModalidades]
   );
 
-  // Vuelo automático rápido al punto crítico seleccionado
   const handleFlyToPoint = (pt: CriticalMapPoint) => {
     setSelectedPinId(pt.id);
     const map = mapInstanceRef.current;
     if (!map) return;
+    try {
+      map.flyTo({
+        center: [pt.lng, pt.lat],
+        zoom: 17.6,
+        pitch: 62,
+        bearing: -20,
+        speed: 2.2
+      });
+    } catch (e) {
+      console.warn('Error al mover cámara:', e);
+    }
+  };
 
-    map.flyTo({
-      center: [pt.lng, pt.lat],
-      zoom: 17.6,
-      pitch: 65,
-      bearing: -20,
-      speed: 2.3,
-      curve: 1.2,
-      essential: true
-    });
-
-    markersMapRef.current.forEach((marker, id) => {
-      const popup = marker.getPopup();
-      if (id === pt.id) {
-        if (popup && !popup.isOpen()) marker.togglePopup();
-      } else if (popup && popup.isOpen()) {
-        marker.togglePopup();
-      }
-    });
+  const handleResetMapCamera = () => {
+    setSelectedPinId(null);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const [lng, lat] = getSectorCenter(activeTitle);
+    map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 62, bearing: -25, speed: 1.6 });
   };
 
   const drawBeveledChartInPdf = (
@@ -838,62 +840,67 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     }
   };
 
+  // Inicializar MapLibre GL una sola vez
   useEffect(() => {
     let isMounted = true;
     const loadMapLibre = async () => {
-      if (!document.getElementById('maplibre-gl-css')) {
-        const link = document.createElement('link');
-        link.id = 'maplibre-gl-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
-        document.head.appendChild(link);
-      }
-      if (!(window as any).maplibregl) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Error MapLibre GL'));
-          document.head.appendChild(script);
-        });
-      }
-      if (!isMounted || !mapContainerRef.current || mapInstanceRef.current) return;
-      const maplibregl = (window as any).maplibregl;
+      try {
+        if (!document.getElementById('maplibre-gl-css')) {
+          const link = document.createElement('link');
+          link.id = 'maplibre-gl-css';
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+          document.head.appendChild(link);
+        }
+        if (!(window as any).maplibregl) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Error MapLibre GL'));
+            document.head.appendChild(script);
+          });
+        }
+        if (!isMounted || !mapContainerRef.current || mapInstanceRef.current) return;
+        const maplibregl = (window as any).maplibregl;
 
-      const map = new maplibregl.Map({
-        container: mapContainerRef.current,
-        style: {
-          version: 8,
-          sources: {
-            'osm-tiles': {
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256
-            }
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: {
+            version: 8,
+            sources: {
+              'osm-tiles': {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256
+              }
+            },
+            layers: [
+              {
+                id: 'osm-cyber-layer',
+                type: 'raster',
+                source: 'osm-tiles'
+              }
+            ]
           },
-          layers: [
-            {
-              id: 'osm-cyber-layer',
-              type: 'raster',
-              source: 'osm-tiles'
-            }
-          ]
-        },
-        center: getSectorCenter(activeTitle),
-        zoom: 16.2,
-        pitch: 62,
-        bearing: -25,
-        antialias: true
-      });
+          center: [-78.5265, -9.1265],
+          zoom: 16.2,
+          pitch: 62,
+          bearing: -25,
+          antialias: true
+        });
 
-      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-      map.on('load', () => {
-        if (isMounted) setMapReady(true);
-      });
-      mapInstanceRef.current = map;
+        map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+        map.on('load', () => {
+          if (isMounted) setMapReady(true);
+        });
+        mapInstanceRef.current = map;
+      } catch (err) {
+        console.warn('Aviso mapa 3D:', err);
+      }
     };
-    loadMapLibre().catch((err) => console.warn('Aviso mapa 3D:', err));
+    loadMapLibre();
     return () => {
       isMounted = false;
       if (mapInstanceRef.current) {
@@ -903,76 +910,87 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     };
   }, []);
 
-  // Aplicar filtro visual nítido para leer calles/avenidas con total claridad
+  // Aplicar contraste nítido para calles
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    const canvas = map.getCanvas();
-    if (!canvas) return;
-
-    if (mapClearMode) {
-      // Modo calles ultra nítidas con contraste alto para leer cada calle y parque
-      canvas.style.filter = 'brightness(104%) contrast(125%) saturate(135%)';
-    } else {
-      // Modo radar nocturno cian iluminado (sin oscurecer las letras)
-      canvas.style.filter = 'invert(90%) hue-rotate(185deg) brightness(115%) contrast(155%) saturate(160%)';
+    try {
+      const canvas = map.getCanvas();
+      if (!canvas) return;
+      if (mapClearMode) {
+        canvas.style.filter = 'brightness(104%) contrast(125%) saturate(135%)';
+      } else {
+        canvas.style.filter = 'invert(90%) hue-rotate(185deg) brightness(115%) contrast(155%) saturate(160%)';
+      }
+    } catch (e) {
+      console.warn('Aviso filtro mapa:', e);
     }
   }, [mapClearMode, mapReady]);
 
+  // Redimensionar mapa al expandir/contraer pantalla completa
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
     const timer = setTimeout(() => {
-      map.resize();
+      try {
+        map.resize();
+      } catch (e) {}
     }, 120);
     return () => clearTimeout(timer);
   }, [isMapExpanded]);
 
-  // Renderizar Pines 3D interactivos con salto automático al hacer clic
+  // Centrar mapa cuando cambia el sector seleccionado
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !mapReady) return;
+    const [lng, lat] = getSectorCenter(activeTitle);
+    try {
+      map.flyTo({ center: [lng, lat], zoom: 16.2, pitch: 62, bearing: -25, speed: 1.5 });
+    } catch (e) {}
+  }, [activeTitle, mapReady]);
+
+  // Dibujar pines 3D sin provocar bucles de estado
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
-    if (!map || !maplibregl) return;
+    if (!map || !maplibregl || !mapReady) return;
 
-    if (!selectedPinId) {
-      const [lng, lat] = getSectorCenter(activeTitle);
-      map.flyTo({ center: [lng, lat], zoom: isMapExpanded ? 16.6 : 16.2, pitch: 62, bearing: -25, speed: 1.6 });
-    }
-
-    markersMapRef.current.forEach((m) => m.remove());
-    markersMapRef.current.clear();
+    markersRef.current.forEach((m) => {
+      try {
+        m.remove();
+      } catch (e) {}
+    });
+    markersRef.current = [];
 
     criticalPoints.forEach((pt) => {
-      const isSelected = selectedPinId === pt.id;
-      const el = document.createElement('div');
-      el.innerHTML = create3DPinHtml(pt.variant, pt.index, isSelected);
+      try {
+        const el = document.createElement('div');
+        el.innerHTML = create3DPinHtml(pt.variant, pt.index);
 
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleFlyToPoint(pt);
-      });
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setSelectedPinId(pt.id);
+          map.flyTo({ center: [pt.lng, pt.lat], zoom: 17.6, pitch: 62, bearing: -20, speed: 2.2 });
+        });
 
-      const popupHtml = `
-        <div style="font-family:monospace;font-size:11px;color:#0f172a;padding:3px 5px;max-width:225px;">
-          <div style="font-weight:900;color:#0369a1;margin-bottom:2px;">#${pt.index} • ${pt.modalidad}</div>
-          <div><strong>Sector:</strong> ${pt.lugar}</div>
-          <div><strong>Turno:</strong> ${pt.turno} | <strong>Móvil:</strong> ${pt.vehiculo}</div>
-        </div>
-      `;
+        const popupHtml = `
+          <div style="font-family:monospace;font-size:11px;color:#0f172a;padding:3px 5px;max-width:225px;">
+            <div style="font-weight:900;color:#0369a1;margin-bottom:2px;">#${pt.index} • ${pt.modalidad}</div>
+            <div><strong>Sector:</strong> ${pt.lugar}</div>
+            <div><strong>Turno:</strong> ${pt.turno} | <strong>Móvil:</strong> ${pt.vehiculo}</div>
+          </div>
+        `;
 
-      const popup = new maplibregl.Popup({ offset: 30, closeButton: false }).setHTML(popupHtml);
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([pt.lng, pt.lat])
-        .setPopup(popup)
-        .addTo(map);
+        const popup = new maplibregl.Popup({ offset: 28, closeButton: false }).setHTML(popupHtml);
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([pt.lng, pt.lat])
+          .setPopup(popup)
+          .addTo(map);
 
-      if (isSelected) {
-        marker.togglePopup();
-      }
-
-      markersMapRef.current.set(pt.id, marker);
+        markersRef.current.push(marker);
+      } catch (e) {}
     });
-  }, [criticalPoints, mapReady, selectedPinId, isMapExpanded]);
+  }, [criticalPoints, mapReady]);
 
   const handleTurnoClick = (turno: string) => {
     const next = selectedTurno === turno ? 'TODOS' : turno;
@@ -986,6 +1004,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   const waveBarsLeft = [16, 30, 46, 26, 52, 34, 22, 42, 28, 16];
   const waveBarsRight = [16, 28, 42, 22, 52, 34, 26, 46, 30, 16];
+
+  const selectedPointObj = useMemo(
+    () => criticalPoints.find((p) => p.id === selectedPinId) || null,
+    [criticalPoints, selectedPinId]
+  );
 
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
@@ -1012,7 +1035,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 </div>
                 <span className="text-base font-mono font-black text-emerald-300 flex items-center gap-1.5">
-                  <Wifi className="w-4 h-4 text-emerald-400" /> {records.length.toLocaleString()} REG
+                  <Wifi className="w-4 h-4 text-emerald-400" /> {safeRecords.length.toLocaleString()} REG
                 </span>
                 <div className="flex gap-1 mt-1">
                   {[100, 85, 92, 70, 95, 80].map((w, i) => (
@@ -1409,7 +1432,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {/* Botón para alternar nitidez de calles */}
                   <button
                     onClick={() => setMapClearMode((prev) => !prev)}
                     className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-black uppercase cursor-pointer transition ${
@@ -1417,13 +1439,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                         ? 'bg-amber-400/25 border-amber-300 text-amber-200'
                         : 'bg-cyan-950 border-cyan-400 text-cyan-200'
                     }`}
-                    title="Alternar entre calles ultra claras y modo radar oscuro"
                   >
                     {mapClearMode ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-cyan-300" />}
                     <span>{mapClearMode ? 'CALLES NÍTIDAS' : 'RADAR OSCURO'}</span>
                   </button>
 
-                  {/* Botón Agrandar / Salir Pantalla Completa */}
                   <button
                     onClick={() => setIsMapExpanded((prev) => !prev)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)]"
@@ -1463,10 +1483,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     </span>
                     {selectedPinId && (
                       <button
-                        onClick={() => setSelectedPinId(null)}
+                        onClick={handleResetMapCamera}
                         className="text-[8px] font-mono text-amber-300 underline cursor-pointer"
                       >
-                        VISTA GENERAL
+                        CENTRAR
                       </button>
                     )}
                   </div>
@@ -1500,6 +1520,27 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     })}
                   </div>
                 </div>
+
+                {/* Tarjeta flotante del punto crítico enfocado */}
+                {selectedPointObj && (
+                  <div className="absolute top-2 right-12 z-10 border border-cyan-300 bg-[#030d1c]/95 backdrop-blur-md rounded-xl p-2.5 max-w-xs shadow-2xl">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-mono font-black text-amber-300">
+                        PUNTO #{selectedPointObj.index}
+                      </span>
+                      <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-mono font-bold text-white leading-tight mb-1">
+                      {selectedPointObj.modalidad}
+                    </div>
+                    <div className="text-[9px] font-mono text-cyan-200">
+                      <div>SECTOR: {selectedPointObj.lugar}</div>
+                      <div>TURNO: {selectedPointObj.turno} • MÓVIL: {selectedPointObj.vehiculo}</div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Leyenda inferior de colores 3D */}
                 <div className="absolute bottom-2 left-2 z-10 border border-cyan-400/70 bg-[#030d1c]/92 backdrop-blur-md rounded-lg px-2.5 py-1.5 pointer-events-none">
