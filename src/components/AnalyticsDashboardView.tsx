@@ -1231,7 +1231,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+              <div className="space-y-1 max-h-[195px] overflow-y-auto pr-1">
                 {filteredUrbanizaciones.map((urb) => {
                   const isChecked = activeUrbsList.includes(urb.nombre);
                   return (
@@ -1261,9 +1261,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RANGO DE TURNOS EXPANDIDO A ALTURA COMPLETA */}
-            <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
-              <div className="flex items-center justify-between mb-2.5">
+            {/* RANGO DE TURNOS EN TARJETAS HORIZONTALES APILADAS CON LETRAS GRANDES Y SIN HUECOS */}
+            <div className="border-2 border-cyan-300/80 bg-gradient-to-b from-[#082242] via-[#051428] to-[#030b17] rounded-xl p-3 flex-1 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.25),inset_0_0_25px_rgba(6,182,212,0.15)]">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-mono font-black tracking-wider text-white uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
                   RANGO DE TURNOS
                 </h3>
@@ -1278,61 +1278,74 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5 text-center flex-1 items-stretch">
+              <div className="flex flex-col gap-2.5 flex-1 justify-between">
                 {[
-                  { label: 'MAÑANA', horario: '06-14H', pct: hudData.pctManana, count: hudData.turnosCount.MAÑANA, color: '#10b981', glow: 'rgba(16,185,129,0.55)' },
-                  { label: 'TARDE', horario: '14-22H', pct: hudData.pctTarde, count: hudData.turnosCount.TARDE, color: '#22d3ee', glow: 'rgba(34,211,238,0.55)' },
-                  { label: 'NOCHE', horario: '22-06H', pct: hudData.pctNoche, count: hudData.turnosCount.NOCHE, color: '#ec4899', glow: 'rgba(236,72,153,0.55)' }
+                  { label: 'MAÑANA', horario: '06:00 - 14:00', pct: hudData.pctManana, count: hudData.turnosCount.MAÑANA, color: '#10b981', glow: 'rgba(16,185,129,0.5)' },
+                  { label: 'TARDE', horario: '14:00 - 22:00', pct: hudData.pctTarde, count: hudData.turnosCount.TARDE, color: '#22d3ee', glow: 'rgba(34,211,238,0.5)' },
+                  { label: 'NOCHE', horario: '22:00 - 06:00', pct: hudData.pctNoche, count: hudData.turnosCount.NOCHE, color: '#ec4899', glow: 'rgba(236,72,153,0.5)' }
                 ].map((t) => {
                   const active = selectedTurno === t.label;
-                  const r = 42;
+                  const r = 34;
                   const circ = 2 * Math.PI * r;
                   const offset = circ - (t.pct / 100) * circ;
                   return (
                     <button
                       key={t.label}
                       onClick={() => handleTurnoClick(t.label)}
-                      className={`h-full py-3 px-1.5 rounded-xl border-2 cursor-pointer flex flex-col items-center justify-between transition-all ${
+                      className={`w-full px-3.5 py-2.5 rounded-xl border-2 cursor-pointer flex items-center justify-between gap-3 transition-all ${
                         active
-                          ? 'bg-cyan-500/30 border-cyan-200 scale-[1.02]'
+                          ? 'bg-cyan-500/30 border-cyan-200 scale-[1.01]'
                           : 'bg-[#030b17]/95 border-cyan-500/45 hover:border-cyan-300 hover:bg-[#061830]'
                       }`}
-                      style={{ boxShadow: active ? `0 0 26px ${t.glow}` : undefined }}
+                      style={{ boxShadow: active ? `0 0 22px ${t.glow}` : undefined }}
                     >
-                      <span className="text-[9px] font-mono text-cyan-400/80 tracking-widest font-bold">
-                        {t.horario}
-                      </span>
-
-                      <div className="relative w-24 h-24 xl:w-28 xl:h-28 flex items-center justify-center my-1">
-                        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r={r} stroke="#0c2238" strokeWidth="7" fill="transparent" />
-                          <circle cx="50" cy="50" r="31" stroke={t.color} strokeWidth="2.5" strokeOpacity="0.65" fill={t.color} fillOpacity="0.15" />
-                          <circle cx="50" cy="50" r="21" stroke={t.color} strokeWidth="1.5" strokeOpacity="0.45" fill="transparent" />
+                      {/* Anillo Circular Grande a la Izquierda */}
+                      <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 84 84">
+                          <circle cx="42" cy="42" r={r} stroke="#0c2238" strokeWidth="6.5" fill="transparent" />
+                          <circle cx="42" cy="42" r="24" stroke={t.color} strokeWidth="2" strokeOpacity="0.65" fill={t.color} fillOpacity="0.16" />
                           <circle
-                            cx="50"
-                            cy="50"
+                            cx="42"
+                            cy="42"
                             r={r}
                             stroke={t.color}
-                            strokeWidth="7"
+                            strokeWidth="6.5"
                             strokeDasharray={circ}
                             strokeDashoffset={offset}
                             strokeLinecap="round"
                             fill="transparent"
-                            style={{ filter: `drop-shadow(0 0 7px ${t.color})` }}
+                            style={{ filter: `drop-shadow(0 0 6px ${t.color})` }}
                           />
                         </svg>
-                        <span className="absolute text-lg xl:text-xl font-mono font-black text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]">
+                        <span className="absolute text-base font-mono font-black text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
                           {t.pct}%
                         </span>
                       </div>
 
-                      <div className="w-full">
-                        <span className="text-xs font-mono font-black text-cyan-100 block tracking-wider">
+                      {/* Nombre del Turno y Horario en Letras Grandes */}
+                      <div className="flex-1 text-left font-mono min-w-0">
+                        <div className="text-base font-black text-white tracking-wider leading-tight">
                           {t.label}
-                        </span>
-                        <span className="text-[10px] font-mono font-bold block mt-0.5" style={{ color: t.color }}>
-                          {t.count} reg
-                        </span>
+                        </div>
+                        <div className="text-xs text-cyan-300/90 font-semibold mt-0.5">
+                          {t.horario}
+                        </div>
+                        <div className="w-full bg-cyan-950 h-1.5 rounded-full overflow-hidden mt-2">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${Math.max(t.pct, 4)}%`, backgroundColor: t.color }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Conteo de Registros Destacado a la Derecha */}
+                      <div className="text-right font-mono shrink-0 pl-1">
+                        <div className="text-xl font-black leading-none" style={{ color: t.color }}>
+                          {t.count}
+                        </div>
+                        <div className="text-[10px] text-cyan-200 font-bold uppercase mt-1">
+                          CASOS
+                        </div>
                       </div>
                     </button>
                   );
@@ -1756,9 +1769,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote (Ocupe el 100% de la tarjeta) */}
+            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote */}
             <div className="border-2 border-emerald-400/75 bg-gradient-to-br from-[#072642] via-[#041428] to-[#020914] rounded-xl p-3.5 flex-1 flex flex-col justify-between shadow-[0_0_25px_rgba(16,185,129,0.28),inset_0_0_25px_rgba(34,211,238,0.14)] relative overflow-hidden">
-              {/* Cabecera */}
               <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5">
                 <span className="text-[10px] font-mono font-black text-emerald-300 uppercase tracking-wider">
                   JURISDICCIÓN // NUEVO CHIMBOTE
@@ -1768,7 +1780,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
               </div>
 
-              {/* Cuerpo Central Expandido (Mapa Grande + Sector Gigante) */}
               <div className="flex items-center gap-3.5 my-auto py-2">
                 <div className="w-28 h-28 rounded-xl bg-[#020813] border-2 border-cyan-400/70 flex items-center justify-center shrink-0 relative shadow-[0_0_20px_rgba(34,211,238,0.25),inset_0_0_20px_rgba(34,211,238,0.2)]">
                   <svg className="w-24 h-24" viewBox="0 0 80 80" fill="none">
@@ -1810,7 +1821,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Franja Inferior de 2 Indicadores que completan todo el ancho y alto */}
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-500/30 font-mono">
                 <div className="bg-[#030b17] border border-cyan-400/40 rounded-lg px-2.5 py-1.5">
                   <div className="text-[8px] text-cyan-300 uppercase">LUGARES AGRUPADOS</div>
