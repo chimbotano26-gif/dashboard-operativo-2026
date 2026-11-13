@@ -1256,7 +1256,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
           <div className="flex-1 max-w-2xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-4 py-2 text-center shadow-[0_0_35px_rgba(6,182,212,0.45)]">
             <h1 className="text-xs sm:text-base md:text-lg font-black tracking-[0.12em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
-              SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
+              SICEP: SISTEMA INTEGRADO DE CONTROL Y ESTADÍSTICA PATRULLERA
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-2.5 text-[10px] font-mono text-cyan-200 mt-0.5">
               <span className="bg-cyan-500/25 px-2.5 py-0.5 rounded border border-cyan-300/50 font-bold truncate max-w-[280px]">
