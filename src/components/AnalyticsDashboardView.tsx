@@ -56,6 +56,22 @@ const getTurno = (r: any): string => {
   return 'NO REGISTRADO';
 };
 
+const getSectorOficial = (r: any, fallbackTitle: string): string => {
+  if (r && typeof r === 'object') {
+    const rawSec = cleanText(r.sector || r.cuadrante || r.subsector || r.zona_operativa);
+    if (rawSec && !['N/A', 'NULL', '-', 'SIN SECTOR'].includes(rawSec)) {
+      return rawSec.startsWith('SECTOR') || rawSec.startsWith('CUADRANTE') ? rawSec : `SECTOR ${rawSec}`;
+    }
+  }
+  const t = cleanText(fallbackTitle);
+  if (t.includes('BUENOS AIRES') || t.includes('PACIFICO') || t.includes('BELLAMAR')) return 'SECTOR I - ZONA NORTE / CÉNTRICA';
+  if (t.includes('CASUARINAS') || t.includes('BRUCE') || t.includes('MARIATEGUI')) return 'SECTOR II - ZONA CENTRAL';
+  if (t.includes('GARATEA') || t.includes('LOS HEROES') || t.includes('SAN LUIS')) return 'SECTOR III - ZONA ESTE';
+  if (t.includes('3 DE OCTUBRE') || t.includes('PRADERA') || t.includes('BRISAS')) return 'SECTOR IV - ZONA SUR';
+  if (t.includes('VILLA MARIA') || t.includes('1 DE MAYO')) return 'SECTOR V - ZONA OESTE';
+  return 'JURISDICCIÓN DISTRITAL NCH';
+};
+
 const getMonthIndex = (r: any): number => {
   if (!r || typeof r !== 'object') return -1;
   const rawMes = cleanText(r.mes || r.month);
@@ -129,7 +145,6 @@ interface CriticalMapPoint {
   variant: PinVariant;
 }
 
-// Pin 3D con resalte intenso, escala mayor y doble anillo parpadeante al seleccionarlo
 const create3DPinHtml = (variant: PinVariant, index: number, isActive: boolean): string => {
   const palettes = {
     BLUE: { light: '#7dd3fc', mid: '#0ea5e9', dark: '#0369a1', glow: 'rgba(14,165,233,0.95)' },
@@ -264,7 +279,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [previewTab, setPreviewTab] = useState<'FRECUENCIA' | 'ANUAL_MESES'>('FRECUENCIA');
   const [exportingPdf, setExportingPdf] = useState<boolean>(false);
 
-  // Control de pantalla completa del mapa, tema y visibilidad de la lista de puntos críticos
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
   const [expandedMapTheme, setExpandedMapTheme] = useState<'LIGHT' | 'DARK'>('LIGHT');
   const [isPointsPanelMinimized, setIsPointsPanelMinimized] = useState<boolean>(false);
@@ -525,15 +539,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     [todasFrecuenciasModalidades]
   );
 
-  // Vuelo cinematográfico 3D ultra cercano (zoom 18.8) deteniéndose debajo del pin
   const flyToPinCinematic = (map: any, pt: CriticalMapPoint) => {
     if (!map) return;
     try {
       const nextBearing = ((pt.index * 28) % 90) - 45;
       map.flyTo({
         center: [pt.lng, pt.lat],
-        offset: [0, 120], // Cámara posicionada debajo del pin
-        zoom: 18.8, // Acercamiento mucho más cercano a nivel de calle
+        offset: [0, 120],
+        zoom: 18.8,
         pitch: 74,
         bearing: nextBearing,
         duration: 2300,
@@ -978,7 +991,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     } catch (e) {}
   }, [activeTitle, mapReady]);
 
-  // Crear pines 3D una vez por lista de puntos
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maplibregl = (window as any).maplibregl;
@@ -1011,7 +1023,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     });
   }, [criticalPoints, mapReady]);
 
-  // Actualizar resalte visual (agrandado + doble parpadeo) del pin seleccionado sin recrear el mapa
   useEffect(() => {
     markersRef.current.forEach(({ id, el, pt }) => {
       el.innerHTML = create3DPinHtml(pt.variant, pt.index, id === selectedPinId);
@@ -1049,15 +1060,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER CON MÓDULO HOLOGRÁFICO AMPLIADO PARA LLENAR EL ESPACIO IZQUIERDO */}
+        {/* HEADER CON MÓDULO HOLOGRÁFICO AMPLIADO */}
         <header className="flex flex-col xl:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full xl:w-auto">
-            {/* Escudo Institucional */}
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border-2 border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
               <Shield className="w-8 h-8 text-cyan-200" />
             </div>
 
-            {/* Telemetría C2 + Radar Satelital y Contadores Futuristas (llena el espacio vacío) */}
             <div className="flex-1 sm:flex-initial border border-cyan-400/60 bg-gradient-to-r from-[#061830] via-[#092242] to-[#061830] rounded-xl px-3.5 py-2 flex items-center gap-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.22)]">
               <div>
                 <div className="flex items-center gap-2">
@@ -1081,7 +1090,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 <Settings className="w-4 h-4 text-emerald-400 -ml-1 mt-3 animate-spin" style={{ animationDuration: '7s', animationDirection: 'reverse' }} />
               </div>
 
-              {/* Bloque Futurista Adicional: Radar GPS en Vivo + Métricas Rápidas */}
               <div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-cyan-500/40">
                 <div className="relative w-10 h-10 flex items-center justify-center">
                   <svg className="w-10 h-10" viewBox="0 0 44 44">
@@ -1112,7 +1120,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Título Central */}
           <div className="flex-1 max-w-2xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-4 py-2 text-center shadow-[0_0_35px_rgba(6,182,212,0.45)]">
             <h1 className="text-xs sm:text-base md:text-lg font-black tracking-[0.12em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
               SISTEMA DE SEGURIDAD CIUDADANA Y CIBER-MONITOREO - SERENAZGO
@@ -1126,7 +1133,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Botones de Acción */}
           <div className="flex items-center gap-2 w-full xl:w-auto justify-end">
             <button
               onClick={handleResetAllFilters}
@@ -1484,9 +1490,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* ================================================================= */}
-            {/* MAPA TÁCTICO 3D: LIMPIO EN PRINCIPAL, LISTA MINIMIZABLE EN FULL   */}
-            {/* ================================================================= */}
+            {/* MAPA TÁCTICO 3D */}
             <div
               className={
                 isMapExpanded
@@ -1553,7 +1557,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               >
                 <div ref={mapContainerRef} className="w-full h-full" />
 
-                {/* LISTA DE PUNTOS CRÍTICOS: SOLO EN PANTALLA COMPLETA Y CON OPCIÓN DE OCULTAR/MINIMIZAR */}
                 {isMapExpanded && (
                   <div
                     className={`absolute top-2 left-2 z-10 border border-cyan-400/85 bg-[#030d1c]/92 backdrop-blur-md rounded-xl shadow-2xl transition-all ${
@@ -1617,7 +1620,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
-                {/* Tarjeta flotante ubicada debajo del encuadre del pin */}
                 {selectedPointObj && (
                   <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-10 border-2 border-cyan-300 bg-[#030d1c]/95 backdrop-blur-md rounded-xl px-3.5 py-2.5 min-w-[240px] max-w-sm shadow-[0_0_25px_rgba(34,211,238,0.6)]">
                     <div className="flex items-center justify-between gap-3 mb-1">
@@ -1689,12 +1691,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
           </main>
 
-          {/* COLUMNA DERECHA */}
-          <aside className="lg:col-span-3 flex flex-col gap-4">
-            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex flex-col items-center">
-              <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-2">INCIDENTES POR RECURSO</h3>
-              <div className="relative w-48 h-48 flex items-center justify-center my-1">
-                <svg className="w-48 h-48 -rotate-90" viewBox="0 0 110 110">
+          {/* COLUMNA DERECHA CON KPI DE JURISDICCIÓN / SECTOR NUEVO CHIMBOTE */}
+          <aside className="lg:col-span-3 flex flex-col gap-3">
+            {/* Tarjeta 1: Incidentes por Recurso */}
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3 flex flex-col items-center">
+              <h3 className="text-xs font-mono font-black text-cyan-200 uppercase w-full text-left mb-1">INCIDENTES POR RECURSO</h3>
+              <div className="relative w-44 h-44 flex items-center justify-center my-0.5">
+                <svg className="w-44 h-44 -rotate-90" viewBox="0 0 110 110">
                   <circle cx="55" cy="55" r="44" stroke="#0c243e" strokeWidth="7" fill="transparent" />
                   <circle cx="55" cy="55" r="33" stroke="#0c243e" strokeWidth="6" fill="transparent" />
                   <circle cx="55" cy="55" r="22" stroke="#0c243e" strokeWidth="5" fill="transparent" />
@@ -1723,32 +1726,82 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               </div>
             </div>
 
-            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3.5 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
-                <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-2 mb-3">
-                  <svg className="w-full h-16" viewBox="0 0 220 60">
-                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.35)" />
-                    <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25" fill="none" stroke="#34d399" strokeWidth="2.4" />
+            {/* Tarjeta 2: Despliegue por Unidad */}
+            <div className="border-2 border-cyan-400/60 bg-[#051428]/95 rounded-xl p-3">
+              <h3 className="text-xs font-mono font-black text-cyan-200 uppercase mb-2">DESPLIEGUE POR UNIDAD</h3>
+              <div className="bg-[#020813] border border-cyan-400/40 rounded-lg p-1.5 mb-2.5">
+                <svg className="w-full h-12" viewBox="0 0 220 60">
+                  <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25 L220,60 L0,60 Z" fill="rgba(16,185,129,0.35)" />
+                  <path d="M0,45 Q25,10 50,35 T100,25 T150,38 T200,15 L220,25" fill="none" stroke="#34d399" strokeWidth="2.4" />
+                </svg>
+              </div>
+              <div className="space-y-2">
+                {hudData.flotaList.map((item, i) => (
+                  <div key={item.unidad} className="space-y-0.5">
+                    <div className="flex justify-between text-[11px] font-mono">
+                      <span className="text-white truncate pr-2">{item.unidad}</span>
+                      <span className="text-emerald-300 font-black shrink-0">{item.casos}</span>
+                    </div>
+                    <div className="w-full bg-[#020813] h-1.5 rounded-full overflow-hidden border border-cyan-400/40">
+                      <div
+                        className={`h-full rounded-full ${
+                          i === 0 ? 'bg-gradient-to-r from-cyan-400 to-emerald-400' : i === 1 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-cyan-400'
+                        }`}
+                        style={{ width: `${Math.max(item.pct, 8)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tarjeta 3: KPI de Sector Jurisdiccional de Nuevo Chimbote */}
+            <div className="border-2 border-emerald-400/75 bg-gradient-to-br from-[#062038] via-[#041326] to-[#020914] rounded-xl p-3 flex-1 flex flex-col justify-between shadow-[0_0_25px_rgba(16,185,129,0.25),inset_0_0_20px_rgba(34,211,238,0.12)] relative overflow-hidden">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-mono font-black text-emerald-300 uppercase tracking-wider">
+                  JURISDICCIÓN // NUEVO CHIMBOTE
+                </span>
+                <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/60 text-emerald-200">
+                  {safeRecords.length > 0 ? ((hudData.total / safeRecords.length) * 100).toFixed(1) : '0.0'}% DISTRITO
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 my-auto">
+                <div className="w-20 h-20 rounded-xl bg-[#020813] border border-cyan-400/60 flex items-center justify-center shrink-0 relative shadow-[inset_0_0_15px_rgba(34,211,238,0.2)]">
+                  <svg className="w-16 h-16" viewBox="0 0 80 80" fill="none">
+                    <line x1="20" y1="5" x2="20" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+                    <line x1="40" y1="5" x2="40" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+                    <line x1="60" y1="5" x2="60" y2="75" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+                    <line x1="5" y1="25" x2="75" y2="25" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+                    <line x1="5" y1="50" x2="75" y2="50" stroke="#22d3ee" strokeOpacity="0.2" strokeWidth="0.8" />
+                    <path
+                      d="M18 14 L46 10 L65 24 L68 48 L52 68 L26 65 L14 44 Z"
+                      fill="rgba(16,185,129,0.16)"
+                      stroke="#22d3ee"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M26 24 L50 22 L56 44 L36 54 L22 40 Z"
+                      fill="rgba(34,211,238,0.14)"
+                      stroke="#34d399"
+                      strokeWidth="1"
+                      strokeDasharray="3 2"
+                    />
+                    <circle cx="41" cy="36" r="9" fill="rgba(245,158,11,0.28)" />
+                    <circle cx="41" cy="36" r="4" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.2" />
                   </svg>
                 </div>
-                <div className="space-y-2.5">
-                  {hudData.flotaList.map((item, i) => (
-                    <div key={item.unidad} className="space-y-1">
-                      <div className="flex justify-between text-[11px] font-mono">
-                        <span className="text-white truncate pr-2">{item.unidad}</span>
-                        <span className="text-emerald-300 font-black shrink-0">{item.casos}</span>
-                      </div>
-                      <div className="w-full bg-[#020813] h-2 rounded-full overflow-hidden border border-cyan-400/40">
-                        <div
-                          className={`h-full rounded-full ${
-                            i === 0 ? 'bg-gradient-to-r from-cyan-400 to-emerald-400' : i === 1 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-cyan-400'
-                          }`}
-                          style={{ width: `${Math.max(item.pct, 8)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+
+                <div className="min-w-0 flex-1 font-mono">
+                  <div className="text-[9px] text-cyan-300 uppercase">SECTOR CORRESPONDIENTE:</div>
+                  <div className="text-xs sm:text-sm font-black text-white leading-snug line-clamp-2 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+                    {getSectorOficial(recordsInScope[0], activeTitle)}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[9px]">
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 font-bold">
+                      {activeUrbsList.length} VARIANTE{activeUrbsList.length > 1 ? 'S' : ''} UNIFICADA{activeUrbsList.length > 1 ? 'S' : ''}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
