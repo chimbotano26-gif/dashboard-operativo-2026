@@ -1634,19 +1634,19 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
 
             {/* ================================================================= */}
-            {/* MAPA TÁCTICO 3D CON COBERTURA MÁXIMA DE ZOOM                      */}
+            {/* MAPA TÁCTICO 3D CON BOTONES SUPERIORES FIJOS Y VISIBLES           */}
             {/* ================================================================= */}
             <div
               className={
                 isMapExpanded
-                  ? 'fixed inset-x-2 sm:inset-x-3 top-16 bottom-2 z-50 border-2 border-cyan-300 bg-[#041020] rounded-2xl p-2.5 sm:p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
+                  ? 'fixed inset-x-2 sm:inset-x-3 top-3 bottom-2 z-[9999] border-2 border-cyan-300 bg-[#041020] rounded-2xl p-2.5 sm:p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
                   : 'border-2 border-cyan-400/80 bg-[#041020] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]'
               }
             >
               <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2 px-0.5">
                 <div className="flex items-center gap-2 min-w-0">
                   <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
-                  <span className="text-xs font-mono font-black text-white uppercase truncate max-w-[200px] sm:max-w-xs">
+                  <span className="text-xs font-mono font-black text-white uppercase truncate max-w-[180px] sm:max-w-xs">
                     {activeTitle}
                   </span>
                 </div>
@@ -1682,7 +1682,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/35 hover:bg-rose-500/55 border border-rose-300 text-rose-100 text-[9px] sm:text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(244,63,94,0.45)]"
                     >
                       <FilterX className="w-3.5 h-3.5" />
-                      <span>BORRAR FILTRO ({allCriticalPoints.length})</span>
+                      <span>BORRAR FILTRO</span>
                     </button>
                   )}
 
