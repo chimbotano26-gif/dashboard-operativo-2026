@@ -553,32 +553,19 @@ function DashboardInner() {
   );
 }
 
-// Componente Intro integrado directamente en App.tsx para evitar errores de rutas
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
-  const [animationProgress, setAnimationProgress] = React.useState<number>(0);
   const [canEnter, setCanEnter] = React.useState<boolean>(false);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
+  // Simulación rápida de carga inicial (1.5 segundos)
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 3;
-      });
-    }, 30);
-    return () => clearInterval(interval);
+    const timer = setTimeout(() => {
+      setCanEnter(true);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
-  React.useEffect(() => {
-    if (animationProgress >= 100) {
-      setCanEnter(true);
-    }
-  }, [animationProgress]);
-
-  // Animación Canvas de nodos cibernéticos
+  // Animación de partículas y red cibernética profunda en el fondo
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -589,35 +576,37 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     let angle = 0;
 
     const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener('resize', resize);
 
-    const particles = Array.from({ length: 60 }, () => ({
-      x: (Math.random() - 0.5) * 250,
-      y: (Math.random() - 0.5) * 250,
-      z: (Math.random() - 0.5) * 250,
-      size: Math.random() * 3 + 1.5
+    const particles = Array.from({ length: 80 }, () => ({
+      x: (Math.random() - 0.5) * 400,
+      y: (Math.random() - 0.5) * 400,
+      z: (Math.random() - 0.5) * 400,
+      size: Math.random() * 2.5 + 1
     }));
 
     const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(2, 6, 15, 0.25)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      angle += 0.008;
+      angle += 0.005;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
 
-      ctx.strokeStyle = 'rgba(34, 211, 238, 0.2)';
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+      ctx.lineWidth = 0.7;
 
       particles.forEach((p1, i) => {
         const x1 = p1.x * cos - p1.z * sin;
         const z1 = p1.z * cos + p1.x * sin;
-        const scale1 = 300 / (300 + z1);
+        const scale1 = 400 / (400 + z1);
         const px1 = cx + x1 * scale1;
         const py1 = cy + p1.y * scale1;
 
@@ -625,12 +614,12 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           if (i < j) {
             const x2 = p2.x * cos - p2.z * sin;
             const z2 = p2.z * cos + p2.x * sin;
-            const scale2 = 300 / (300 + z2);
-            const px2 = cx + x2 * scale1;
-            const py2 = cy + p2.y * scale1;
+            const scale2 = 400 / (400 + z2);
+            const px2 = cx + x2 * scale2;
+            const py2 = cy + p2.y * scale2;
 
             const dist = Math.hypot(px1 - px2, py1 - py2);
-            if (dist < 65) {
+            if (dist < 75) {
               ctx.beginPath();
               ctx.moveTo(px1, py1);
               ctx.lineTo(px2, py2);
@@ -639,9 +628,9 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           }
         });
 
-        ctx.fillStyle = i % 2 === 0 ? '#38bdf8' : '#34d399';
+        ctx.fillStyle = i % 2 === 0 ? '#22d3ee' : '#10b981';
         ctx.shadowColor = '#22d3ee';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
         ctx.fillRect(px1 - p1.size / 2, py1 - p1.size / 2, p1.size * scale1, p1.size * scale1);
         ctx.shadowBlur = 0;
       });
@@ -658,103 +647,81 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-[#02060f] flex flex-col items-center justify-center p-4 select-none font-mono overflow-hidden">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none opacity-85" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(2,6,15,0.4),rgba(2,6,15,0.92))] pointer-events-none" />
+    <div className="fixed inset-0 z-[99999] bg-[#010409] flex flex-col items-center justify-center select-none font-mono overflow-hidden">
+      {/* Fondo Canvas Dinámico */}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      
+      {/* Viñeta y efectos de luz holográfica */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08)_0%,rgba(1,4,9,0.95)_80%)] pointer-events-none" />
+      
+      {/* Líneas de escaneo estilo HUD */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40" />
 
-      <div className="relative z-10 flex flex-col items-center max-w-lg w-full text-center">
-        <div className="text-[10px] sm:text-xs tracking-[0.25em] text-cyan-300 font-bold uppercase mb-1 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-          MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE
+      {/* Contenido Principal Centrado en Pantalla Completa */}
+      <div className="relative z-10 flex flex-col items-center justify-center text-center px-4">
+        
+        {/* Encabezado Institucional Táctico */}
+        <div className="mb-8 space-y-1">
+          <div className="text-xs sm:text-sm tracking-[0.35em] text-cyan-400 font-bold uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.8)]">
+            MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE
+          </div>
+          <div className="text-sm sm:text-lg tracking-[0.25em] text-emerald-400 font-black uppercase drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]">
+            SUB GERENCIA DE SERENAZGO &bull; SICEP C2
+          </div>
         </div>
-        <div className="text-[11px] sm:text-sm tracking-[0.18em] text-emerald-300 font-black uppercase mb-6 border-b border-cyan-500/40 pb-2.5 w-full">
-          SUB GERENCIA DE SERENAZGO // SICEP C2
-        </div>
 
-        {/* LOGO OFICIAL DE SERENAZGO COMO BOTÓN INTERACTIVO */}
-        <div className="relative my-4 group">
-          <div className="absolute -inset-4 rounded-full border-2 border-dashed border-cyan-400/60 animate-spin" style={{ animationDuration: '22s' }} />
-          <div className="absolute -inset-8 rounded-full border border-emerald-400/40 animate-spin" style={{ animationDuration: '32s', animationDirection: 'reverse' }} />
-          
-          {canEnter && (
-            <div className="absolute -inset-3 rounded-full bg-emerald-500/30 blur-xl animate-pulse" />
-          )}
+        {/* NÚCLEO CENTRAL: ESCUDO GIGANTE CON ANILLOS HOLOGRÁFICOS */}
+        <div className="relative my-2">
+          {/* Anillo exterior giratorio rápido */}
+          <div className="absolute -inset-10 sm:-inset-14 rounded-full border-2 border-dashed border-cyan-500/40 animate-spin pointer-events-none" style={{ animationDuration: '18s' }} />
+          {/* Anillo interior giratorio inverso */}
+          <div className="absolute -inset-5 sm:-inset-7 rounded-full border border-emerald-400/50 animate-spin pointer-events-none" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
+          {/* Esplendor de energía base */}
+          <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-2xl animate-pulse" />
 
+          {/* BOTÓN PRINCIPAL CON EL LOGO */}
           <button
             onClick={() => {
               if (canEnter) onEnterDashboard();
             }}
-            disabled={!canEnter}
-            className={`relative w-48 h-48 sm:w-56 sm:h-56 rounded-full p-2 bg-gradient-to-br from-cyan-950 via-[#061830] to-slate-950 border-4 ${
-              canEnter 
-                ? 'border-emerald-400 shadow-[0_0_65px_rgba(16,185,129,0.9)] cursor-pointer hover:scale-105' 
-                : 'border-cyan-500/60 shadow-[0_0_35px_rgba(6,182,212,0.5)] cursor-wait'
-            } transition-all duration-500 flex items-center justify-center overflow-hidden`}
+            className="relative w-56 h-56 sm:w-72 sm:h-72 rounded-full p-3 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_80px_rgba(34,211,238,0.6)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden"
+            title="Hacer clic para ingresar al sistema"
           >
+            {/* Efecto de brillo interno al pasar el mouse */}
+            <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
             <img
               src="/logo-serenazgo.png"
-              alt="Escudo Oficial Sub Gerencia de Serenazgo Nuevo Chimbote"
-              className="w-full h-full object-cover rounded-full filter contrast-115 drop-shadow-[0_0_15px_rgba(34,211,238,0.9)]"
+              alt="Escudo Oficial Sub Gerencia de Serenazgo"
+              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_25px_rgba(34,211,238,0.9)]"
             />
 
+            {/* Overlay si aún está cargando */}
             {!canEnter && (
-              <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[2px] flex flex-col items-center justify-center text-cyan-200">
-                <span className="text-[10px] font-bold tracking-wider animate-pulse">CARGANDO...</span>
+              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-cyan-300">
+                <div className="w-10 h-10 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
+                <span className="text-xs font-bold tracking-widest animate-pulse">INICIALIZANDO HUD...</span>
               </div>
             )}
           </button>
         </div>
 
-        {/* BARRA DE PROGRESO */}
-        <div className="w-full bg-[#051326]/90 border border-cyan-500/50 rounded-xl p-3.5 mt-4 shadow-[inset_0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md">
-          <div className="flex justify-between items-center text-[10px] text-cyan-200 mb-2 font-bold">
-            <span>ESTADO DE SISTEMA:</span>
-            <span className={canEnter ? 'text-emerald-300 font-black' : 'text-amber-300'}>
-              {canEnter ? 'LISTO PARA ACCESO' : `SINCRONIZANDO (${Math.round(animationProgress)}%)`}
-            </span>
-          </div>
-          <div className="w-full bg-cyan-950 h-2 rounded-full overflow-hidden border border-cyan-400/40">
-            <div
-              className="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-300 transition-all duration-200 shadow-[0_0_10px_#10b981]"
-              style={{ width: `${animationProgress}%` }}
-            />
-          </div>
+        {/* ACCESO DIRECTO / BOTÓN DE ENTRADA GRANDE */}
+        <div className="mt-10">
+          <button
+            onClick={onEnterDashboard}
+            className="px-10 py-4 bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-400 hover:from-cyan-400 hover:to-emerald-300 text-slate-950 rounded-xl text-sm sm:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_40px_rgba(34,211,238,0.8)] cursor-pointer transition-all hover:scale-105 active:scale-95 animate-pulse flex items-center gap-3"
+          >
+            <span>ACCEDER AL DASHBOARD OPERATIVO</span>
+            <span className="text-lg">&rarr;</span>
+          </button>
         </div>
 
-        {/* BOTÓN DE INGRESO */}
-        <div className="mt-5">
-          {canEnter ? (
-            <button
-              onClick={onEnterDashboard}
-              className="px-8 py-3.5 bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 hover:from-emerald-400 hover:to-cyan-300 text-slate-950 rounded-xl text-xs font-black uppercase tracking-widest shadow-[0_0_35px_rgba(16,185,129,0.8)] cursor-pointer transition animate-pulse"
-            >
-              INGRESAR A SICEP // SERENAZGO
-            </button>
-          ) : (
-            <div className="text-[10px] text-cyan-400/80 animate-pulse tracking-wider">
-              [ EL ESCUDO SE ACTIVARÁ AL COMPLETAR LA CARGA ]
-            </div>
-          )}
+        <div className="mt-4 text-[10px] text-cyan-500/70 tracking-widest uppercase">
+          SECURE INTERFACE // SICEP V2026 // NUEVO CHIMBOTE
         </div>
+
       </div>
     </div>
-  );
-}
-
-// Función principal App controlando el estado del Intro
-export default function App() {
-  const [showIntro, setShowIntro] = React.useState<boolean>(true);
-
-  return (
-    <>
-      {showIntro ? (
-        <IntroSplashView onEnterDashboard={() => setShowIntro(false)} />
-      ) : (
-        <AuthProvider>
-          <CustomTitlesProvider>
-            <DashboardInner />
-          </CustomTitlesProvider>
-        </AuthProvider>
-      )}
-    </>
   );
 }
