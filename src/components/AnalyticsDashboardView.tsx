@@ -3,7 +3,7 @@ import {
   Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
   Square, Layers, X, RotateCcw, Activity, FileDown,
   Edit3, Eye, CalendarRange, Maximize2, Minimize2,
-  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock
+  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, GripHorizontal
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -337,10 +337,48 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [selectedMapModalidad, setSelectedMapModalidad] = useState<string | null>(null);
   const [selectedMapColor, setSelectedMapColor] = useState<PinVariant | null>(null);
 
+  // ESTADOS PARA MOVER LA TARJETA FLOTANTE LIBREMENTE CON EL MOUSE
+  const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDraggingCard, setIsDraggingCard] = useState<boolean>(false);
+  const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ id: string; marker: any; el: HTMLDivElement; pt: CriticalMapPoint }[]>([]);
   const [mapReady, setMapReady] = useState<boolean>(false);
+
+  // Manejador para arrastrar la tarjeta con el mouse
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingCard) return;
+      setCardPosition({
+        x: e.clientX - dragOffsetRef.current.x,
+        y: e.clientY - dragOffsetRef.current.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingCard(false);
+    };
+
+    if (isDraggingCard) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingCard]);
+
+  const startDraggingCard = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDraggingCard(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragOffsetRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
 
   const urbanizaciones = useMemo(() => {
     const map = new Map<string, number>();
@@ -420,6 +458,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     setSelectedPinId(null);
     setSelectedMapModalidad(null);
     setSelectedMapColor(null);
+    setCardPosition(null);
     if (onFilterZona) onFilterZona('');
     if (onFilterTurno) onFilterTurno('TODOS');
   };
@@ -656,6 +695,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     const firstPin = group.points[0];
     if (firstPin) {
       setSelectedPinId(firstPin.id);
+      setCardPosition(null);
       flyToPinCinematic(mapInstanceRef.current, firstPin);
     }
   };
@@ -668,12 +708,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     setSelectedMapColor(color);
     setSelectedMapModalidad(null);
     setSelectedPinId(null);
+    setCardPosition(null);
   };
 
   const handleClearMapFilter = () => {
     setSelectedMapColor(null);
     setSelectedMapModalidad(null);
     setSelectedPinId(null);
+    setCardPosition(null);
     const map = mapInstanceRef.current;
     if (!map) return;
     const [lng, lat] = getSectorCenter(activeTitle);
@@ -1146,6 +1188,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           setSelectedPinId(pt.id);
+          setCardPosition(null);
           flyToPinCinematic(map, pt);
         });
 
@@ -1849,14 +1892,25 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
-                {/* TARJETA FLOTANTE CON NOMBRE DE SERENO, UNIDAD Y HORA DE ALERTA */}
+                {/* TARJETA FLOTANTE CON ARRASTRE LIBRE (DRAG & DROP), HORA DE ALERTA Y DATOS */}
                 {selectedPointObj && (
-                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-35 border-2 border-cyan-300 bg-[#051326]/98 backdrop-blur-md rounded-xl px-4 py-3 min-w-[290px] max-w-sm shadow-[0_0_35px_rgba(34,211,238,0.8)] font-mono max-h-[85%] overflow-y-auto">
-                    <div className="flex items-center justify-between gap-3 mb-1.5 border-b border-cyan-500/30 pb-1">
-                      <span className="text-[10px] font-black text-amber-300 uppercase">
-                        INTERVENCIÓN CRÍTICA #{selectedPointObj.index}
-                      </span>
-                      <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer p-0.5">
+                  <div
+                    onMouseDown={startDraggingCard}
+                    style={
+                      cardPosition
+                        ? { position: 'fixed', left: `${cardPosition.x}px`, top: `${cardPosition.y}px`, zIndex: 99999, cursor: 'grab' }
+                        : { position: 'absolute', bottom: '44px', left: '50%T', transform: 'translateX(-50%)', zIndex: 99999, cursor: 'grab' }
+                    }
+                    className="border-2 border-cyan-300 bg-[#051326]/98 backdrop-blur-md rounded-xl px-4 py-3 min-w-[290px] max-w-sm shadow-[0_0_40px_rgba(34,211,238,0.9)] font-mono max-h-[85%] overflow-y-auto select-none"
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-1.5 border-b border-cyan-500/30 pb-1 cursor-move" title="Haz clic y arrastra para mover la ventana">
+                      <div className="flex items-center gap-1.5">
+                        <GripHorizontal className="w-4 h-4 text-cyan-400" />
+                        <span className="text-[10px] font-black text-amber-300 uppercase">
+                          INTERVENCIÓN CRÍTICA #{selectedPointObj.index} (ARRASTRABLE)
+                        </span>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedPinId(null); }} className="text-cyan-400 hover:text-white cursor-pointer p-0.5">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -1982,7 +2036,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <span className="font-bold text-white">{hudData.turnosCount.TARDE}</span>
                 </div>
                 <div className="bg-[#030b17] p-1.5 rounded border border-emerald-400/40">
-                  <span className="text-cyan-300 block">NOC</span>
+                  <span className="text-emerald-300 block">NOC</span>
                   <span className="font-bold text-white">{hudData.turnosCount.NOCHE}</span>
                 </div>
               </div>
