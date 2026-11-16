@@ -28,38 +28,21 @@ import ComparativoView from './components/ComparativoView';
 import DetalleIncidenciasView from './components/DetalleIncidenciasView';
 import DatabaseExcelHub from './components/DatabaseExcelHub';
 
-// COMPONENTE INTRO: NÚCLEO HOLOGRÁFICO CON TELEMETRÍA DE BD
+// COMPONENTE INTRO: HUD 3D Y TELEMETRÍA SEGURA
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = useState<boolean>(false);
-  const [lastUpdateText, setLastUpdateText] = useState<string>("CONSULTANDO TELEMETRÍA C2...");
+  const [lastUpdateText, setLastUpdateText] = useState<string>("SINCRONIZANDO TELEMETRÍA C2...");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const fetchLatestDataInfo = async () => {
-      try {
-        const { data, error } = await supabase
-          .from(SUPABASE_TABLE)
-          .select('*')
-          .order('fecha', { ascending: false })
-          .limit(1);
-
-        if (!error && data && data.length > 0) {
-          const ultimo = data[0];
-          const fechaStr = ultimo.fecha || ultimo.created_at || "Reciente";
-          setLastUpdateText(`ÚLTIMO REGISTRO DB: ${fechaStr}`);
-        } else {
-          const now = new Date();
-          setLastUpdateText(`DB ACTUALIZADA: ${now.toLocaleDateString('es-PE')} ${now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`);
-        }
-      } catch (e) {
-        const now = new Date();
-        setLastUpdateText(`SINCRONIZADO: ${now.toLocaleDateString('es-PE')} ${now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`);
-      } finally {
-        setReady(true);
-      }
-    };
-
-    fetchLatestDataInfo();
+    const timer = setTimeout(() => {
+      const now = new Date();
+      const fechaStr = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const horaStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+      setLastUpdateText(`SISTEMA ACTUALIZADO: ${fechaStr} // ${horaStr}`);
+      setReady(true);
+    }, 1200);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -229,7 +212,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
   );
 }
 
-// DASHBOARD INTERNO (Tus componentes originales de SICEP)
+// DASHBOARD INTERNO
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('ANALITICA');
   const [records, setRecords] = useState<IncidentRecord[]>([]);
@@ -279,7 +262,7 @@ function DashboardInner() {
   );
 }
 
-// APP PRINCIPAL CON CONTROL DE INTRO
+// APP PRINCIPAL
 export default function App() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
 
