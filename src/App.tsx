@@ -553,7 +553,7 @@ function DashboardInner() {
   );
 }
 
-// INTRO CYBERPUNK 3D AVANZADO (Efecto Red de Nodos Esférica + Logo de Serenazgo)
+// INTRO CYBERPUNK 3D CON ESCUDO ANIMADO Y NÚCLEO PULSANTE
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = React.useState<boolean>(false);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -563,7 +563,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     return () => clearTimeout(timer);
   }, []);
 
-  // Animación 3D idéntica a la referencia: Esfera de nodos y cubos interconectados
+  // Animación 3D de red de nodos esférica
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -581,14 +581,12 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     resize();
     window.addEventListener('resize', resize);
 
-    // Generar estructura esférica de nodos (cubos/puntos 3D)
-    const particleCount = 180;
-    const particles = Array.from({ length: particleCount }, () => {
+    const particles = Array.from({ length: 180 }, () => {
       const u = Math.random();
       const v = Math.random();
       const theta = u * 2.0 * Math.PI;
       const phi = Math.acos(2.0 * v - 1.0);
-      const r = 140 + Math.random() * 40; // Radio de la esfera
+      const r = 150 + Math.random() * 45;
       return {
         x: r * Math.sin(phi) * Math.cos(theta),
         y: r * Math.sin(phi) * Math.sin(theta),
@@ -599,23 +597,21 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     });
 
     const render = () => {
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
+      ctx.fillStyle = 'rgba(1, 4, 9, 0.35)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      angleX += 0.008;
-      angleY += 0.012;
+      angleX += 0.007;
+      angleY += 0.01;
 
       const cosX = Math.cos(angleX);
       const sinX = Math.sin(angleX);
       const cosY = Math.cos(angleY);
       const sinY = Math.sin(angleY);
 
-      // Renderizar conexiones y nodos 3D
       particles.forEach((p1, i) => {
-        // Rotación 3D
         const x1 = p1.x * cosY + p1.z * sinY;
         const z1 = -p1.x * sinY + p1.z * cosY;
         const y1 = p1.y * cosX - z1 * sinX;
@@ -625,7 +621,6 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
         const px1 = cx + x1 * scale1;
         const py1 = cy + y1 * scale1;
 
-        // Conectar nodos cercanos para formar la red cibernética
         particles.forEach((p2, j) => {
           if (i < j) {
             const x2 = p2.x * cosY + p2.z * sinY;
@@ -639,7 +634,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
 
             const dist = Math.hypot(px1 - px2, py1 - py2);
             if (dist < 55) {
-              ctx.strokeStyle = `rgba(56, 189, 248, ${0.25 * (1 - dist / 55)})`;
+              ctx.strokeStyle = `rgba(56, 189, 248, ${0.28 * (1 - dist / 55)})`;
               ctx.lineWidth = 0.8;
               ctx.beginPath();
               ctx.moveTo(px1, py1);
@@ -649,7 +644,6 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           }
         });
 
-        // Dibujar nodo/cubo brillante
         ctx.fillStyle = p1.color;
         ctx.shadowColor = p1.color;
         ctx.shadowBlur = 10;
@@ -670,16 +664,13 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
 
   return (
     <div className="fixed inset-0 z-[99999] bg-[#010409] flex flex-col items-center justify-center select-none font-mono overflow-hidden">
-      {/* Canvas 3D de fondo */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-      
-      {/* Viñeta futurista */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.12)_0%,rgba(1,4,9,0.96)_85%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.15)_0%,rgba(1,4,9,0.97)_80%)] pointer-events-none" />
 
-      {/* Contenido Central Holográfico */}
+      {/* Contenido Central */}
       <div className="relative z-10 flex flex-col items-center text-center px-4">
         
-        {/* Textos Institucionales */}
+        {/* Cabecera Táctica */}
         <div className="mb-6 space-y-1">
           <div className="text-[11px] sm:text-xs tracking-[0.35em] text-cyan-400 font-bold uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]">
             MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE
@@ -689,32 +680,35 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           </div>
         </div>
 
-        {/* NÚCLEO CENTRAL CON LA ESFERA DE NODOS Y EL LOGO DE SERENAZGO AL CENTRO */}
+        {/* NÚCLEO CENTRAL CON ESCUDO ANIMADO Y PULSANTE */}
         <div className="relative my-6">
-          {/* Anillos holográficos exteriores rotando */}
-          <div className="absolute -inset-14 sm:-inset-20 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '22s' }} />
-          <div className="absolute -inset-8 sm:-inset-12 rounded-full border-2 border-dashed border-emerald-400/50 animate-spin pointer-events-none" style={{ animationDuration: '30s', animationDirection: 'reverse' }} />
-          <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-3xl animate-pulse" />
+          {/* Anillos exteriores holográficos */}
+          <div className="absolute -inset-14 sm:-inset-22 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
+          <div className="absolute -inset-8 sm:-inset-14 rounded-full border-2 border-dashed border-emerald-400/60 animate-spin pointer-events-none" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
+          
+          {/* Aura de energía brillante */}
+          <div className="absolute inset-0 rounded-full bg-cyan-400/30 blur-2xl animate-pulse" style={{ animationDuration: '2s' }} />
 
-          {/* BOTÓN CON EL LOGO OFICIAL DE SERENAZGO */}
+          {/* BOTÓN CON LOGO DE SERENAZGO DINÁMICO */}
           <button
             onClick={() => {
               if (ready) onEnterDashboard();
             }}
-            className="relative w-56 h-56 sm:w-72 sm:h-72 rounded-full p-3 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_100px_rgba(34,211,238,0.8)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden"
+            className="relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.9)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden animate-[pulse_3s_infinite]"
           >
-            <div className="absolute inset-0 bg-cyan-500/15 opacity-0 group-hover:opacity-100 transition-opacity" />
-            
+            {/* Efecto de escaneo láser cruzando el escudo */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 pointer-events-none" />
+
             <img
               src="/logo-serenazgo.png"
               alt="Escudo Oficial Sub Gerencia de Serenazgo"
-              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_25px_rgba(34,211,238,1)]"
+              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_30px_rgba(34,211,238,1)] animate-[spin_40s_linear_infinite]"
             />
 
             {!ready && (
               <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center text-cyan-300">
                 <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-xs font-bold tracking-widest animate-pulse">SINCRONIZANDO RED 3D...</span>
+                <span className="text-xs font-bold tracking-widest animate-pulse">CARGANDO NÚCLEO...</span>
               </div>
             )}
           </button>
