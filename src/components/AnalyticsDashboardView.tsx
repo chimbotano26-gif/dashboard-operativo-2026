@@ -3,7 +3,7 @@ import {
   Shield, Search, Crosshair, Wifi, CheckSquare,
   Square, Layers, X, RotateCcw, Activity, FileDown,
   Edit3, Eye, CalendarRange, Maximize2, Minimize2,
-  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, Atom
+  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, Zap
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -337,7 +337,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [selectedMapModalidad, setSelectedMapModalidad] = useState<string | null>(null);
   const [selectedMapColor, setSelectedMapColor] = useState<PinVariant | null>(null);
 
-  // Reloj en tiempo real estilo HUD
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<{ id: string; marker: any; el: HTMLDivElement; pt: CriticalMapPoint }[]>([]);
+  const [mapReady, setMapReady] = useState<boolean>(false);
+
+  // Reloj en tiempo real estilo HUD limpio
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDateStr, setCurrentDateStr] = useState<string>('');
 
@@ -351,11 +356,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<{ id: string; marker: any; el: HTMLDivElement; pt: CriticalMapPoint }[]>([]);
-  const [mapReady, setMapReady] = useState<boolean>(false);
 
   const urbanizaciones = useMemo(() => {
     const map = new Map<string, number>();
@@ -1213,15 +1213,13 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* ================================================================= */}
-        {/* HEADER UNIFICADO ESTILO HUD FUTURISTA (COMO EN TU REFERENCIA)    */}
-        {/* ================================================================= */}
+        {/* HEADER LIMPIO Y ESTÉTICO (EXACTO A TU REFERENCIA) */}
         <header className="flex flex-col xl:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           
-          {/* Módulo Izquierdo: Reloj en vivo y escudo */}
-          <div className="flex items-center gap-3 w-full xl:w-auto bg-gradient-to-r from-[#030b17] via-[#051428] to-[#061c38] border-2 border-cyan-400/60 rounded-2xl px-4 py-2 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
-            <div className="w-11 h-11 rounded-xl bg-cyan-950/80 border border-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(34,211,238,0.4)]">
-              <Shield className="w-6 h-6 text-cyan-300" />
+          {/* Bloque Izquierdo: Reloj y Estado en Vivo */}
+          <div className="flex items-center gap-3 w-full xl:w-auto bg-[#030c1a] border-2 border-cyan-400/60 rounded-2xl px-4 py-2.5 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+            <div className="w-10 h-10 rounded-xl bg-cyan-950/90 border border-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(34,211,238,0.4)]">
+              <Shield className="w-5 h-5 text-cyan-300" />
             </div>
             <div className="font-mono text-left">
               <div className="flex items-center gap-2 text-[10px] text-cyan-300 font-bold">
@@ -1230,22 +1228,15 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   ● EN VIVO
                 </span>
               </div>
-              <div className="text-xl font-black text-cyan-100 tracking-wider drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+              <div className="text-lg font-black text-cyan-100 tracking-wider drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
                 {currentTime || '10:00:00'}
               </div>
             </div>
           </div>
 
-          {/* Módulo Central: Placa Holográfica con Título y Núcleo Energético */}
-          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950/70 via-cyan-600/25 to-cyan-950/70 border-y-2 border-x border-cyan-300/80 rounded-2xl px-6 py-2.5 text-center shadow-[0_0_40px_rgba(6,182,212,0.4),inset_0_0_20px_rgba(34,211,238,0.25)] relative overflow-hidden flex items-center justify-between">
-            <div className="absolute -left-10 top-0 bottom-0 w-20 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent blur-md pointer-events-none animate-pulse" />
-            <div className="absolute -right-10 top-0 bottom-0 w-20 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent blur-md pointer-events-none animate-pulse" />
-
-            <div className="w-10 h-10 rounded-full border border-cyan-400/60 bg-cyan-950 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.7)] shrink-0 hidden sm:flex">
-              <Atom className="w-5 h-5 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
-            </div>
-
-            <div className="flex-1 px-2 text-center">
+          {/* Bloque Central: Título Oficial SICEP */}
+          <div className="flex-1 max-w-3xl w-full bg-[#040e22] border-2 border-cyan-400/70 rounded-2xl px-6 py-2.5 text-center shadow-[0_0_30px_rgba(6,182,212,0.3),inset_0_0_15px_rgba(34,211,238,0.15)] relative overflow-hidden flex items-center justify-center">
+            <div className="flex-1 text-center">
               <h1 className="text-xs sm:text-sm md:text-base font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
                 SICEP: SISTEMA INTEGRADO DE CONTROL Y ESTADÍSTICA PATRULLERA
               </h1>
@@ -1255,27 +1246,23 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 <span className="text-amber-300 font-bold">TURNO: {selectedTurno}</span>
               </div>
             </div>
-
-            <div className="w-10 h-10 rounded-full border border-cyan-400/60 bg-cyan-950 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.7)] shrink-0 hidden sm:flex">
-              <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
-            </div>
           </div>
 
-          {/* Módulo Derecho: Botones de Acción Futuristas & Telemetría */}
+          {/* Bloque Derecho: Botones de Acción Superiores */}
           <div className="flex items-center gap-2.5 w-full xl:w-auto justify-end">
             <button
               onClick={handleResetAllFilters}
-              className="relative px-3.5 py-2.5 bg-[#0a192f] hover:bg-[#112240] border-2 border-rose-500/80 rounded-xl text-rose-300 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(244,63,94,0.3)] hover:shadow-[0_0_25px_rgba(244,63,94,0.6)] cursor-pointer transition flex items-center gap-1.5 group overflow-hidden"
+              className="px-4 py-2.5 bg-[#08182d] hover:bg-[#0f2647] border-2 border-rose-500/80 rounded-xl text-rose-200 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.3)] cursor-pointer transition flex items-center gap-2"
             >
-              <RotateCcw className="w-4 h-4 text-rose-400 group-hover:rotate-180 transition duration-500" />
+              <RotateCcw className="w-4 h-4 text-rose-400" />
               <span>BORRAR FILTROS</span>
             </button>
 
             <button
               onClick={() => setIsPreviewOpen(true)}
-              className="relative px-3.5 py-2.5 bg-[#0a2522] hover:bg-[#0f3833] border-2 border-emerald-400/90 rounded-xl text-emerald-200 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)] cursor-pointer transition flex items-center gap-1.5 group overflow-hidden"
+              className="px-4 py-2.5 bg-[#062622] hover:bg-[#0a3d36] border-2 border-emerald-400 rounded-xl text-emerald-100 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.35)] cursor-pointer transition flex items-center gap-2"
             >
-              <Eye className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+              <Eye className="w-4 h-4 text-emerald-400" />
               <span>VISTA PREVIA / PDF</span>
             </button>
           </div>
