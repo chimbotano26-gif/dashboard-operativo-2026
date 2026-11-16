@@ -16,7 +16,7 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
   const [canEnter, setCanEnter] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Simulación de precarga fluida en background
+  // Precarga fluida en background
   useEffect(() => {
     const interval = setInterval(() => {
       setAnimationProgress((prev) => {
@@ -36,7 +36,7 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
     }
   }, [animationProgress, isDataLoaded]);
 
-  // Renderizado del efecto de malla y nodos cúbicos en Canvas
+  // Animación Canvas de nodos y cubos interconectados
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -129,7 +129,7 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
           SUB GERENCIA DE SERENAZGO // SICEP C2
         </div>
 
-        {/* ESCUDO DE SERENAZGO CONECTADO DIRECTAMENTE AL ARCHIVO DE PUBLIC */}
+        {/* LOGO EXACTO DE SERENAZGO COMO BOTÓN DE ACCESO */}
         <div className="relative my-4 group">
           <div className="absolute -inset-4 rounded-full border-2 border-dashed border-cyan-400/60 animate-spin" style={{ animationDuration: '22s' }} />
           <div className="absolute -inset-8 rounded-full border border-emerald-400/40 animate-spin" style={{ animationDuration: '32s', animationDirection: 'reverse' }} />
@@ -150,7 +150,6 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
             } transition-all duration-500 flex items-center justify-center overflow-hidden`}
             title={canEnter ? '¡Sistema listo! Haz clic en el escudo para ingresar' : 'Sincronizando telemetría y precargando base de datos...'}
           >
-            {/* Ruta exacta del archivo que ya tienes en public */}
             <img
               src="/logo-serenazgo.png"
               alt="Escudo Oficial Sub Gerencia de Serenazgo Nuevo Chimbote"
@@ -166,7 +165,6 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
           </button>
         </div>
 
-        {/* Tarjeta de Precarga */}
         <div className="w-full bg-[#051326]/90 border border-cyan-500/50 rounded-xl p-3.5 mt-4 shadow-[inset_0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] text-cyan-200 mb-2 font-bold">
             <span className="flex items-center gap-1.5">
@@ -193,7 +191,6 @@ export const IntroSplashView: React.FC<IntroSplashViewProps> = ({
           </div>
         </div>
 
-        {/* Botón de Acceso */}
         <div className="mt-5">
           {canEnter ? (
             <button
