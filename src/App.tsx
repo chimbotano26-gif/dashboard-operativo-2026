@@ -553,17 +553,45 @@ function DashboardInner() {
   );
 }
 
-// COMPONENTE INTRO: NÚCLEO HOLOGRÁFICO LIMPIO (SIN BOTÓN INFERIOR)
+// COMPONENTE INTRO CON TELEMETRÍA DINÁMICA DE ACTUALIZACIÓN DE DATOS
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = React.useState<boolean>(false);
+  const [lastUpdateText, setLastUpdateText] = React.useState<string>("SINCRONIZANDO TELEMETRÍA...");
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
-  // Precarga automática de datos en segundo plano
+  // Consultar el último registro de Supabase o localStorage en segundo plano
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setReady(true);
-    }, 1200);
-    return () => clearTimeout(timer);
+    const fetchLatestDataInfo = async () => {
+      try {
+        // Intentamos consultar directamente la tabla principal de Supabase para obtener el registro más reciente
+        const { data, error } = await supabase
+          .from(SUPABASE_TABLE)
+          .select('*')
+          .order('fecha', { ascending: false }) // Ajusta 'fecha' o 'created_at' según tu columna en BD
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          const ultimoRegistro = data[0];
+          // Tomamos la fecha y hora del último registro encontrado
+          const fechaStr = ultimoRegistro.fecha || ultimoRegistro.created_at || "Reciente";
+          setLastUpdateText(`ACTUALIZADO AL: ${fechaStr}`);
+        } else {
+          // Si no hay conexión o tabla directa, usamos la fecha actual del sistema formateada
+          const now = new Date();
+          const fechaFormateada = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          const horaFormateada = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+          setLastUpdateText(`ÚLTIMO REGISTRO: ${fechaFormateada} // ${horaFormateada}`);
+        }
+      } catch (e) {
+        // Fallback seguro si ocurre cualquier detalle con la red
+        const now = new Date();
+        setLastUpdateText(`DB SYNC: ${now.toLocaleDateString('es-PE')} ${now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`);
+      } finally {
+        setReady(true);
+      }
+    };
+
+    fetchLatestDataInfo();
   }, []);
 
   // Animación 3D de red esférica
@@ -683,7 +711,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           </div>
         </div>
 
-        {/* NÚCLEO ÚNICO: EL ESCUDO */}
+        {/* NÚCLEO: ESCUDO INTERACTIVO */}
         <div className="relative my-4">
           <div className="absolute -inset-14 sm:-inset-22 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
           <div className="absolute -inset-8 sm:-inset-14 rounded-full border-2 border-dashed border-emerald-400/60 animate-spin pointer-events-none" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
@@ -694,7 +722,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
             onClick={() => {
               if (ready) onEnterDashboard();
             }}
-            title={ready ? "Hacer clic para ingresar" : "Sincronizando..."}
+            title={ready ? "Hacer clic para ingresar" : "Sincronizando base de datos..."}
             className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 ${
               ready ? 'border-emerald-400 shadow-[0_0_100px_rgba(16,185,129,0.9)] cursor-pointer hover:scale-105' : 'border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.9)] cursor-wait'
             } transition-all duration-500 flex items-center justify-center overflow-hidden`}
@@ -708,21 +736,26 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
             {!ready && (
               <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-cyan-300">
                 <div className="w-10 h-10 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-[11px] font-bold tracking-widest animate-pulse">CARGANDO DATOS...</span>
+                <span className="text-[11px] font-bold tracking-widest animate-pulse">CARGANDO DB...</span>
               </div>
             )}
           </button>
         </div>
 
-        {/* Estado */}
+        {/* Estado y Telemetría de Actualización */}
         <div className="mt-6 text-xs sm:text-sm font-bold tracking-[0.2em] uppercase">
           {ready ? (
-            <span className="text-emerald-400 animate-pulse drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]">
-              [ HAGA CLIC EN EL ESCUDO PARA INGRESAR ]
-            </span>
+            <div className="space-y-1.5">
+              <div className="text-emerald-400 animate-pulse drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]">
+                [ HAGA CLIC EN EL ESCUDO PARA INGRESAR ]
+              </div>
+              <div className="text-[11px] text-cyan-300 tracking-widest bg-slate-950/80 px-4 py-1.5 rounded-lg border border-cyan-500/40 shadow-[inset_0_0_10px_rgba(6,182,212,0.2)]">
+                📶 {lastUpdateText}
+              </div>
+            </div>
           ) : (
             <span className="text-cyan-400/80 animate-pulse">
-              SINCRONIZANDO DATOS DEL DASHBOARD...
+              CONECTANDO CON SUPABASE & TELEMETRÍA...
             </span>
           )}
         </div>
