@@ -553,20 +553,20 @@ function DashboardInner() {
   );
 }
 
-// INTRO CYBERPUNK 3D: ESCUDO INTERACTIVO Y CARGA AUTOMÁTICA EN BACKGROUND
+// COMPONENTE INTRO: NÚCLEO HOLOGRÁFICO LIMPIO (SIN BOTÓN INFERIOR)
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = React.useState<boolean>(false);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
-  // Simula la precarga de datos del dashboard en background mientras se aprecia el intro
+  // Precarga automática de datos en segundo plano
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setReady(true);
-    }, 1200); // Se habilita apenas se estabiliza la red 3D
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
-  // Animación 3D de red de nodos esférica
+  // Animación 3D de red esférica
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -673,7 +673,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
       {/* Contenido Central */}
       <div className="relative z-10 flex flex-col items-center text-center px-4">
         
-        {/* Cabecera Táctica */}
+        {/* Cabecera */}
         <div className="mb-6 space-y-1">
           <div className="text-[11px] sm:text-xs tracking-[0.35em] text-cyan-400 font-bold uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]">
             MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE
@@ -683,7 +683,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           </div>
         </div>
 
-        {/* NÚCLEO CENTRAL: EL ESCUDO ES EL ÚNICO BOTÓN INTERACTIVO DE ACCESO */}
+        {/* NÚCLEO ÚNICO: EL ESCUDO */}
         <div className="relative my-4">
           <div className="absolute -inset-14 sm:-inset-22 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
           <div className="absolute -inset-8 sm:-inset-14 rounded-full border-2 border-dashed border-emerald-400/60 animate-spin pointer-events-none" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
@@ -694,13 +694,11 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
             onClick={() => {
               if (ready) onEnterDashboard();
             }}
-            title={ready ? "Hacer clic para ingresar al sistema" : "Cargando datos..."}
+            title={ready ? "Hacer clic para ingresar" : "Sincronizando..."}
             className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 ${
               ready ? 'border-emerald-400 shadow-[0_0_100px_rgba(16,185,129,0.9)] cursor-pointer hover:scale-105' : 'border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.9)] cursor-wait'
             } transition-all duration-500 flex items-center justify-center overflow-hidden`}
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 pointer-events-none" />
-
             <img
               src="/logo-serenazgo.png"
               alt="Escudo Oficial Sub Gerencia de Serenazgo"
@@ -716,7 +714,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           </button>
         </div>
 
-        {/* Indicador de estado minimalista sin botones extras */}
+        {/* Estado */}
         <div className="mt-6 text-xs sm:text-sm font-bold tracking-[0.2em] uppercase">
           {ready ? (
             <span className="text-emerald-400 animate-pulse drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]">
@@ -738,7 +736,7 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
   );
 }
 
-// CONTROLADOR DE ESTADO APP
+// APP PRINCIPAL
 export default function App() {
   const [showIntro, setShowIntro] = React.useState<boolean>(true);
 
