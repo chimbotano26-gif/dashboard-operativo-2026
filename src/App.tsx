@@ -553,13 +553,16 @@ function DashboardInner() {
   );
 }
 
-// INTRO CYBERPUNK 3D CON ESCUDO ANIMADO Y NÚCLEO PULSANTE
+// INTRO CYBERPUNK 3D: ESCUDO INTERACTIVO Y CARGA AUTOMÁTICA EN BACKGROUND
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = React.useState<boolean>(false);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
+  // Simula la precarga de datos del dashboard en background mientras se aprecia el intro
   React.useEffect(() => {
-    const timer = setTimeout(() => setReady(true), 1500);
+    const timer = setTimeout(() => {
+      setReady(true);
+    }, 1200); // Se habilita apenas se estabiliza la red 3D
     return () => clearTimeout(timer);
   }, []);
 
@@ -680,51 +683,53 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           </div>
         </div>
 
-        {/* NÚCLEO CENTRAL CON ESCUDO ANIMADO Y PULSANTE */}
-        <div className="relative my-6">
-          {/* Anillos exteriores holográficos */}
+        {/* NÚCLEO CENTRAL: EL ESCUDO ES EL ÚNICO BOTÓN INTERACTIVO DE ACCESO */}
+        <div className="relative my-4">
           <div className="absolute -inset-14 sm:-inset-22 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
           <div className="absolute -inset-8 sm:-inset-14 rounded-full border-2 border-dashed border-emerald-400/60 animate-spin pointer-events-none" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
           
-          {/* Aura de energía brillante */}
           <div className="absolute inset-0 rounded-full bg-cyan-400/30 blur-2xl animate-pulse" style={{ animationDuration: '2s' }} />
 
-          {/* BOTÓN CON LOGO DE SERENAZGO DINÁMICO */}
           <button
             onClick={() => {
               if (ready) onEnterDashboard();
             }}
-            className="relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.9)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden animate-[pulse_3s_infinite]"
+            title={ready ? "Hacer clic para ingresar al sistema" : "Cargando datos..."}
+            className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 ${
+              ready ? 'border-emerald-400 shadow-[0_0_100px_rgba(16,185,129,0.9)] cursor-pointer hover:scale-105' : 'border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.9)] cursor-wait'
+            } transition-all duration-500 flex items-center justify-center overflow-hidden`}
           >
-            {/* Efecto de escaneo láser cruzando el escudo */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 pointer-events-none" />
 
             <img
               src="/logo-serenazgo.png"
               alt="Escudo Oficial Sub Gerencia de Serenazgo"
-              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_30px_rgba(34,211,238,1)] animate-[spin_40s_linear_infinite]"
+              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_30px_rgba(34,211,238,1)]"
             />
 
             {!ready && (
-              <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center text-cyan-300">
-                <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-xs font-bold tracking-widest animate-pulse">CARGANDO NÚCLEO...</span>
+              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-cyan-300">
+                <div className="w-10 h-10 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
+                <span className="text-[11px] font-bold tracking-widest animate-pulse">CARGANDO DATOS...</span>
               </div>
             )}
           </button>
         </div>
 
-        {/* BOTÓN DE ACCESO PRINCIPAL */}
-        <div className="mt-6">
-          <button
-            onClick={onEnterDashboard}
-            className="px-10 py-4 bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-500 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 rounded-xl text-sm sm:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_50px_rgba(34,211,238,0.9)] cursor-pointer transition-all hover:scale-105 active:scale-95 animate-pulse"
-          >
-            INGRESAR AL SISTEMA &rarr;
-          </button>
+        {/* Indicador de estado minimalista sin botones extras */}
+        <div className="mt-6 text-xs sm:text-sm font-bold tracking-[0.2em] uppercase">
+          {ready ? (
+            <span className="text-emerald-400 animate-pulse drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]">
+              [ HAGA CLIC EN EL ESCUDO PARA INGRESAR ]
+            </span>
+          ) : (
+            <span className="text-cyan-400/80 animate-pulse">
+              SINCRONIZANDO DATOS DEL DASHBOARD...
+            </span>
+          )}
         </div>
 
-        <div className="mt-3 text-[10px] text-cyan-400/70 tracking-widest uppercase">
+        <div className="mt-3 text-[10px] text-cyan-400/60 tracking-widest uppercase">
           SICEP C2 COMMAND SYSTEM // NUEVO CHIMBOTE 2026
         </div>
 
