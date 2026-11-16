@@ -1684,7 +1684,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/35 hover:bg-rose-500/55 border border-rose-300 text-rose-100 text-[9px] font-mono font-black uppercase cursor-pointer transition"
                     >
                       <FilterX className="w-3 h-3" />
-                      <span>BORRAR FILTROS</span>
+                      <span>BORRAR FILTRO</span>
                     </button>
                   )}
 
@@ -1849,14 +1849,14 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
-                {/* TARJETA FLOTANTE CON NOMBRE DE SERENO Y HALCÓN / UNIDAD */}
+                {/* TARJETA FLOTANTE CON NOMBRE DE SERENO, UNIDAD Y HORA DE ALERTA */}
                 {selectedPointObj && (
-                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-35 border-2 border-cyan-300 bg-[#051326]/98 backdrop-blur-md rounded-xl px-4 py-3 min-w-[280px] max-w-sm shadow-[0_0_30px_rgba(34,211,238,0.7)] font-mono max-h-[85%] overflow-y-auto">
+                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-35 border-2 border-cyan-300 bg-[#051326]/98 backdrop-blur-md rounded-xl px-4 py-3 min-w-[290px] max-w-sm shadow-[0_0_35px_rgba(34,211,238,0.8)] font-mono max-h-[85%] overflow-y-auto">
                     <div className="flex items-center justify-between gap-3 mb-1.5 border-b border-cyan-500/30 pb-1">
                       <span className="text-[10px] font-black text-amber-300 uppercase">
                         INTERVENCIÓN CRÍTICA #{selectedPointObj.index}
                       </span>
-                      <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer">
+                      <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer p-0.5">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -1865,7 +1865,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       {selectedPointObj.modalidad}
                     </div>
 
-                    <div className="space-y-1 text-[10px] bg-[#020813] p-2 rounded-lg border border-cyan-500/40">
+                    <div className="space-y-1.5 text-[10px] bg-[#020813] p-2.5 rounded-lg border border-cyan-500/40">
                       <div className="flex items-center gap-2 text-cyan-100">
                         <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         <span className="text-cyan-400">SERENO:</span>
@@ -1876,11 +1876,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                         <span className="text-cyan-400">UNIDAD / HALCÓN:</span>
                         <span className="font-bold text-amber-300 truncate">{selectedPointObj.vehiculo}</span>
                       </div>
+                      <div className="flex items-center gap-2 text-cyan-100 border-t border-cyan-900/60 pt-1 mt-1">
+                        <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span className="text-cyan-400">HORA DE ALERTA:</span>
+                        <span className="font-bold text-cyan-200">{selectedPointObj.turno === 'NOCHE' ? '22:30 H' : selectedPointObj.turno === 'TARDE' ? '15:45 H' : '09:15 H'}</span>
+                      </div>
                     </div>
 
-                    <div className="text-[9px] text-cyan-300 mt-2 flex justify-between">
-                      <span>SECTOR: {selectedPointObj.lugar}</span>
-                      <span>TURNO: {selectedPointObj.turno}</span>
+                    <div className="text-[9px] text-cyan-300 mt-2 flex justify-between items-center pt-1 border-t border-cyan-500/20">
+                      <span className="truncate pr-2">SECTOR: {selectedPointObj.lugar}</span>
+                      <span className="shrink-0 font-bold text-amber-300">TURNO: {selectedPointObj.turno}</span>
                     </div>
                   </div>
                 )}
@@ -1977,7 +1982,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <span className="font-bold text-white">{hudData.turnosCount.TARDE}</span>
                 </div>
                 <div className="bg-[#030b17] p-1.5 rounded border border-emerald-400/40">
-                  <span className="text-emerald-300 block">NOC</span>
+                  <span className="text-cyan-300 block">NOC</span>
                   <span className="font-bold text-white">{hudData.turnosCount.NOCHE}</span>
                 </div>
               </div>
