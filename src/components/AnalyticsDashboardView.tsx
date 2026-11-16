@@ -1684,7 +1684,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/35 hover:bg-rose-500/55 border border-rose-300 text-rose-100 text-[9px] font-mono font-black uppercase cursor-pointer transition"
                     >
                       <FilterX className="w-3 h-3" />
-                      <span>BORRAR FILTRO</span>
+                      <span>BORRAR FILTROS</span>
                     </button>
                   )}
 
@@ -1876,11 +1876,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                         <span className="text-cyan-400">UNIDAD / HALCÓN:</span>
                         <span className="font-bold text-amber-300 truncate">{selectedPointObj.vehiculo}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-cyan-100 border-t border-cyan-900/50 pt-1 mt-1">
-                        <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span className="text-cyan-400">HORA DE ALERTA:</span>
-                        <span className="font-bold text-cyan-200">{selectedPointObj.turno === 'NOCHE' ? '22:30 H' : selectedPointObj.turno === 'TARDE' ? '15:45 H' : '09:15 H'}</span>
-                      </div>
                     </div>
 
                     <div className="text-[9px] text-cyan-300 mt-2 flex justify-between">
@@ -1918,7 +1913,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             <div className="border-2 border-cyan-400/70 bg-[#051428]/95 rounded-xl p-3.5 shadow-[inset_0_0_25px_rgba(6,182,212,0.12)]">
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-xs font-mono font-black text-white uppercase flex items-center gap-1.5">
-                  <Activity className="app-icon w-4 h-4 text-cyan-400" />
+                  <Activity className="w-4 h-4 text-cyan-400" />
                   MATRIZ DE FRECUENCIA ({activeTitle})
                 </h3>
                 <span className="text-[10px] font-mono text-emerald-300 font-bold">
@@ -1926,10 +1921,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 </span>
               </div>
               <div className="space-y-2 max-h-[205px] overflow-y-auto pr-1">
-                {frecuenciasTop.length === 0 ? (
+                {frecuenciaModalidadesTop.length === 0 ? (
                   <div className="text-center py-6 text-xs font-mono text-cyan-500">SIN INCIDENCIAS EN ESTE FILTRO</div>
                 ) : (
-                  frecuenciasTop.map((item, idx) => (
+                  frecuenciaModalidadesTop.map((item, idx) => (
                     <div key={item.modalidad} className="grid grid-cols-12 items-center gap-2 text-xs">
                       <span className="col-span-5 sm:col-span-4 font-mono text-[11px] text-white truncate">{item.modalidad}</span>
                       <div className="col-span-5 sm:col-span-6 bg-[#020813] h-4 rounded-sm border border-cyan-400/60 p-0.5 overflow-hidden">
@@ -1982,7 +1977,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <span className="font-bold text-white">{hudData.turnosCount.TARDE}</span>
                 </div>
                 <div className="bg-[#030b17] p-1.5 rounded border border-emerald-400/40">
-                  <span className="text-cyan-300 block">NOC</span>
+                  <span className="text-emerald-300 block">NOC</span>
                   <span className="font-bold text-white">{hudData.turnosCount.NOCHE}</span>
                 </div>
               </div>
