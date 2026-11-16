@@ -3,7 +3,7 @@ import {
   Shield, Search, Crosshair, Wifi, CheckSquare,
   Square, Layers, X, RotateCcw, Activity, FileDown,
   Edit3, Eye, CalendarRange, Maximize2, Minimize2,
-  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, Zap
+  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, Zap, Atom
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -320,6 +320,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 }) => {
   const safeRecords = useMemo(() => (Array.isArray(records) ? records : []), [records]);
 
+  // Pantalla de Carga (Intro) para evitar congelamientos iniciales al procesar datos
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 900);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedUrbs, setSelectedUrbs] = useState<string[]>([]);
   const [customGroupName, setCustomGroupName] = useState<string>('');
@@ -342,7 +352,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const markersRef = useRef<{ id: string; marker: any; el: HTMLDivElement; pt: CriticalMapPoint }[]>([]);
   const [mapReady, setMapReady] = useState<boolean>(false);
 
-  // Reloj en tiempo real estilo HUD limpio
+  // Reloj en tiempo real
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDateStr, setCurrentDateStr] = useState<string>('');
 
@@ -1202,6 +1212,25 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
   const hasActiveMapFilter = Boolean(selectedMapColor || selectedMapModalidad || selectedPinId);
 
+  // Pantalla de Carga Estética (Intro) para solucionar el retraso inicial / congelamiento
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#02060f] flex flex-col items-center justify-center text-cyan-400 font-mono select-none">
+        <div className="relative w-28 h-28 flex items-center justify-center mb-6">
+          <div className="absolute inset-0 rounded-full border-4 border-cyan-500/20 animate-ping" />
+          <div className="absolute inset-2 rounded-full border-2 border-dashed border-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+          <Shield className="w-12 h-12 text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
+        </div>
+        <div className="text-base font-black tracking-[0.2em] text-white uppercase drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+          INICIALIZANDO SICEP C2...
+        </div>
+        <div className="text-xs text-cyan-400/80 mt-2 tracking-widest">
+          CARGANDO TELEMETRÍA Y GEOLOCALIZACIÓN TÁCTICA
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#02060f] text-cyan-50 font-sans p-2 sm:p-4 relative overflow-hidden select-none">
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(6,182,212,0.3),transparent_65%)] pointer-events-none" />
@@ -1213,7 +1242,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER LIMPIO Y ESTÉTICO (EXACTO A TU REFERENCIA) */}
+        {/* ================================================================= */}
+        {/* HEADER UNIFICADO ESTILO HUD FUTURISTA (EXACTO A TU REFERENCIA)    */}
+        {/* ================================================================= */}
         <header className="flex flex-col xl:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
           
           {/* Bloque Izquierdo: Reloj y Estado en Vivo */}
