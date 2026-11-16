@@ -553,17 +553,17 @@ function DashboardInner() {
   );
 }
 
-// NUEVO COMPONENTE INTRO: HUD CYBERPUNK DE PANTALLA COMPLETA
+// INTRO CYBERPUNK 3D AVANZADO (Efecto Red de Nodos Esférica + Logo de Serenazgo)
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = React.useState<boolean>(false);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setReady(true), 1200);
+    const timer = setTimeout(() => setReady(true), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Animación de red cibernética de alta densidad
+  // Animación 3D idéntica a la referencia: Esfera de nodos y cubos interconectados
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -571,7 +571,8 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     if (!ctx) return;
 
     let animId: number;
-    let theta = 0;
+    let angleX = 0;
+    let angleY = 0;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -580,43 +581,66 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
     resize();
     window.addEventListener('resize', resize);
 
-    const nodes = Array.from({ length: 70 }, () => ({
-      x: (Math.random() - 0.5) * 450,
-      y: (Math.random() - 0.5) * 450,
-      z: (Math.random() - 0.5) * 450,
-      s: Math.random() * 2.5 + 1
-    }));
+    // Generar estructura esférica de nodos (cubos/puntos 3D)
+    const particleCount = 180;
+    const particles = Array.from({ length: particleCount }, () => {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 140 + Math.random() * 40; // Radio de la esfera
+      return {
+        x: r * Math.sin(phi) * Math.cos(theta),
+        y: r * Math.sin(phi) * Math.sin(theta),
+        z: r * Math.cos(phi),
+        size: Math.random() * 3 + 1,
+        color: Math.random() > 0.4 ? '#38bdf8' : '#34d399'
+      };
+    });
 
-    const draw = () => {
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.3)';
+    const render = () => {
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      theta += 0.004;
-      const c = Math.cos(theta);
-      const s = Math.sin(theta);
+      angleX += 0.008;
+      angleY += 0.012;
 
-      ctx.strokeStyle = 'rgba(34, 211, 238, 0.18)';
-      ctx.lineWidth = 0.8;
+      const cosX = Math.cos(angleX);
+      const sinX = Math.sin(angleX);
+      const cosY = Math.cos(angleY);
+      const sinY = Math.sin(angleY);
 
-      nodes.forEach((n1, i) => {
-        const x1 = n1.x * c - n1.z * s;
-        const z1 = n1.z * c + n1.x * s;
-        const sc1 = 380 / (380 + z1);
-        const px1 = cx + x1 * sc1;
-        const py1 = cy + n1.y * sc1;
+      // Renderizar conexiones y nodos 3D
+      particles.forEach((p1, i) => {
+        // Rotación 3D
+        const x1 = p1.x * cosY + p1.z * sinY;
+        const z1 = -p1.x * sinY + p1.z * cosY;
+        const y1 = p1.y * cosX - z1 * sinX;
+        const finalZ1 = p1.y * sinX + z1 * cosX;
 
-        nodes.forEach((n2, j) => {
+        const scale1 = 400 / (400 + finalZ1);
+        const px1 = cx + x1 * scale1;
+        const py1 = cy + y1 * scale1;
+
+        // Conectar nodos cercanos para formar la red cibernética
+        particles.forEach((p2, j) => {
           if (i < j) {
-            const x2 = n2.x * c - n2.z * s;
-            const z2 = n2.z * c + n2.x * s;
-            const sc2 = 380 / (380 + z2);
-            const px2 = cx + x2 * sc2;
-            const py2 = cy + n2.y * sc2;
+            const x2 = p2.x * cosY + p2.z * sinY;
+            const z2 = -p2.x * sinY + p2.z * cosY;
+            const y2 = p2.y * cosX - z2 * sinX;
+            const finalZ2 = p2.y * sinX + z2 * cosX;
 
-            if (Math.hypot(px1 - px2, py1 - py2) < 70) {
+            const scale2 = 400 / (400 + finalZ2);
+            const px2 = cx + x2 * scale2;
+            const py2 = cy + y2 * scale2;
+
+            const dist = Math.hypot(px1 - px2, py1 - py2);
+            if (dist < 55) {
+              ctx.strokeStyle = `rgba(56, 189, 248, ${0.25 * (1 - dist / 55)})`;
+              ctx.lineWidth = 0.8;
               ctx.beginPath();
               ctx.moveTo(px1, py1);
               ctx.lineTo(px2, py2);
@@ -625,17 +649,18 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
           }
         });
 
-        ctx.fillStyle = i % 2 === 0 ? '#22d3ee' : '#34d399';
-        ctx.shadowColor = '#22d3ee';
+        // Dibujar nodo/cubo brillante
+        ctx.fillStyle = p1.color;
+        ctx.shadowColor = p1.color;
         ctx.shadowBlur = 10;
-        ctx.fillRect(px1 - n1.s / 2, py1 - n1.s / 2, n1.s * sc1, n1.s * sc1);
+        ctx.fillRect(px1 - (p1.size * scale1) / 2, py1 - (p1.size * scale1) / 2, p1.size * scale1, p1.size * scale1);
         ctx.shadowBlur = 0;
       });
 
-      animId = requestAnimationFrame(draw);
+      animId = requestAnimationFrame(render);
     };
 
-    draw();
+    render();
 
     return () => {
       window.removeEventListener('resize', resize);
@@ -644,63 +669,69 @@ function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void })
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-[#020617] flex flex-col items-center justify-center select-none font-mono overflow-hidden">
+    <div className="fixed inset-0 z-[99999] bg-[#010409] flex flex-col items-center justify-center select-none font-mono overflow-hidden">
+      {/* Canvas 3D de fondo */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.1)_0%,rgba(2,6,23,0.95)_85%)] pointer-events-none" />
+      
+      {/* Viñeta futurista */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.12)_0%,rgba(1,4,9,0.96)_85%)] pointer-events-none" />
 
-      {/* Contenedor Holográfico Central */}
-      <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-2xl">
+      {/* Contenido Central Holográfico */}
+      <div className="relative z-10 flex flex-col items-center text-center px-4">
         
-        {/* Titular */}
-        <div className="mb-6 space-y-1.5">
-          <div className="text-[11px] sm:text-xs tracking-[0.3em] text-cyan-400 font-bold uppercase drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
+        {/* Textos Institucionales */}
+        <div className="mb-6 space-y-1">
+          <div className="text-[11px] sm:text-xs tracking-[0.35em] text-cyan-400 font-bold uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]">
             MUNICIPALIDAD DISTRITAL DE NUEVO CHIMBOTE
           </div>
-          <div className="text-sm sm:text-lg tracking-[0.2em] text-emerald-400 font-black uppercase drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]">
+          <div className="text-sm sm:text-xl tracking-[0.25em] text-emerald-400 font-black uppercase drop-shadow-[0_0_18px_rgba(16,185,129,1)]">
             SUB GERENCIA DE SERENAZGO // SICEP C2
           </div>
         </div>
 
-        {/* NÚCLEO CENTRAL CON LOGO GIGANTE Y ANILLOS GIRATORIOS */}
-        <div className="relative my-4">
-          <div className="absolute -inset-12 sm:-inset-16 rounded-full border-2 border-dashed border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
-          <div className="absolute -inset-6 sm:-inset-8 rounded-full border border-emerald-400/50 animate-spin pointer-events-none" style={{ animationDuration: '28s', animationDirection: 'reverse' }} />
-          <div className="absolute inset-0 rounded-full bg-cyan-500/25 blur-3xl animate-pulse" />
+        {/* NÚCLEO CENTRAL CON LA ESFERA DE NODOS Y EL LOGO DE SERENAZGO AL CENTRO */}
+        <div className="relative my-6">
+          {/* Anillos holográficos exteriores rotando */}
+          <div className="absolute -inset-14 sm:-inset-20 rounded-full border border-cyan-400/40 animate-spin pointer-events-none" style={{ animationDuration: '22s' }} />
+          <div className="absolute -inset-8 sm:-inset-12 rounded-full border-2 border-dashed border-emerald-400/50 animate-spin pointer-events-none" style={{ animationDuration: '30s', animationDirection: 'reverse' }} />
+          <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-3xl animate-pulse" />
 
+          {/* BOTÓN CON EL LOGO OFICIAL DE SERENAZGO */}
           <button
             onClick={() => {
               if (ready) onEnterDashboard();
             }}
-            className="relative w-60 h-60 sm:w-72 sm:h-72 rounded-full p-3.5 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_90px_rgba(34,211,238,0.7)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden"
+            className="relative w-56 h-56 sm:w-72 sm:h-72 rounded-full p-3 bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-900 border-4 border-cyan-400 shadow-[0_0_100px_rgba(34,211,238,0.8)] group cursor-pointer hover:scale-105 transition-all duration-500 flex items-center justify-center overflow-hidden"
           >
-            <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-cyan-500/15 opacity-0 group-hover:opacity-100 transition-opacity" />
+            
             <img
               src="/logo-serenazgo.png"
               alt="Escudo Oficial Sub Gerencia de Serenazgo"
-              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_20px_rgba(34,211,238,0.9)]"
+              className="w-full h-full object-cover rounded-full filter contrast-125 drop-shadow-[0_0_25px_rgba(34,211,238,1)]"
             />
 
             {!ready && (
-              <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-sm flex flex-col items-center justify-center text-cyan-300">
+              <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center text-cyan-300">
                 <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-xs font-bold tracking-widest animate-pulse">CARGANDO NÚCLEO...</span>
+                <span className="text-xs font-bold tracking-widest animate-pulse">SINCRONIZANDO RED 3D...</span>
               </div>
             )}
           </button>
         </div>
 
         {/* BOTÓN DE ACCESO PRINCIPAL */}
-        <div className="mt-8">
+        <div className="mt-6">
           <button
             onClick={onEnterDashboard}
-            className="px-10 py-4 bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-500 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 rounded-xl text-sm sm:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_45px_rgba(34,211,238,0.9)] cursor-pointer transition-all hover:scale-105 active:scale-95 animate-pulse"
+            className="px-10 py-4 bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-500 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 rounded-xl text-sm sm:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_50px_rgba(34,211,238,0.9)] cursor-pointer transition-all hover:scale-105 active:scale-95 animate-pulse"
           >
             INGRESAR AL SISTEMA &rarr;
           </button>
         </div>
 
         <div className="mt-3 text-[10px] text-cyan-400/70 tracking-widest uppercase">
-          SECURE COMMAND CENTER // NUEVO CHIMBOTE 2026
+          SICEP C2 COMMAND SYSTEM // NUEVO CHIMBOTE 2026
         </div>
 
       </div>
