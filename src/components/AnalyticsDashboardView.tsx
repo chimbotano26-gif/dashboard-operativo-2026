@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
+  Shield, Search, Crosshair, Wifi, CheckSquare,
   Square, Layers, X, RotateCcw, Activity, FileDown,
   Edit3, Eye, CalendarRange, Maximize2, Minimize2,
-  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon
+  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, Atom
 } from 'lucide-react';
 import { IncidentRecord } from '../types';
 
@@ -185,6 +185,7 @@ interface CriticalMapPoint {
   lugar: string;
   turno: string;
   vehiculo: string;
+  agente: string;
   variant: PinVariant;
 }
 
@@ -336,6 +337,21 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   const [selectedMapModalidad, setSelectedMapModalidad] = useState<string | null>(null);
   const [selectedMapColor, setSelectedMapColor] = useState<PinVariant | null>(null);
 
+  // Reloj en tiempo real estilo HUD
+  const [currentTime, setCurrentTime] = useState<string>('');
+  const [currentDateStr, setCurrentDateStr] = useState<string>('');
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+      setCurrentDateStr(now.toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase());
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ id: string; marker: any; el: HTMLDivElement; pt: CriticalMapPoint }[]>([]);
@@ -447,6 +463,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
       const mod = getModalidad(r);
       const variant = getModalidadVariant(mod);
+      const vehiculo = getVehiculo(r);
+      const agente = getAgente(r);
 
       list.push({
         id: `pt_${i}`,
@@ -456,7 +474,8 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         modalidad: mod,
         lugar: getUrbanizacion(r) || activeTitle,
         turno: getTurno(r),
-        vehiculo: getVehiculo(r),
+        vehiculo,
+        agente,
         variant
       });
     }
@@ -1194,96 +1213,73 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="absolute -bottom-[2px] -left-[2px] w-12 h-12 border-b-4 border-l-4 border-cyan-300 rounded-bl-2xl pointer-events-none" />
         <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-4 border-r-4 border-cyan-300 rounded-br-2xl pointer-events-none" />
 
-        {/* HEADER */}
+        {/* ================================================================= */}
+        {/* HEADER UNIFICADO ESTILO HUD FUTURISTA (COMO EN TU REFERENCIA)    */}
+        {/* ================================================================= */}
         <header className="flex flex-col xl:flex-row items-center justify-between gap-3 pb-3 mb-4 border-b border-cyan-500/40">
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full xl:w-auto">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/35 to-blue-950 border-2 border-cyan-300 flex items-center justify-center shadow-[0_0_25px_rgba(34,211,238,0.6)] shrink-0">
-              <Shield className="w-8 h-8 text-cyan-200" />
+          
+          {/* Módulo Izquierdo: Reloj en vivo y escudo */}
+          <div className="flex items-center gap-3 w-full xl:w-auto bg-gradient-to-r from-[#030b17] via-[#051428] to-[#061c38] border-2 border-cyan-400/60 rounded-2xl px-4 py-2 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
+            <div className="w-11 h-11 rounded-xl bg-cyan-950/80 border border-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(34,211,238,0.4)]">
+              <Shield className="w-6 h-6 text-cyan-300" />
             </div>
-
-            <div className="flex-1 sm:flex-initial border border-cyan-400/60 bg-gradient-to-r from-[#061830] via-[#092242] to-[#061830] rounded-xl px-3.5 py-2 flex items-center gap-3.5 shadow-[inset_0_0_20px_rgba(6,182,212,0.22)]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-cyan-300 tracking-widest font-bold">TELEMETRÍA C2</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                </div>
-                <span className="text-base font-mono font-black text-emerald-300 flex items-center gap-1.5">
-                  <Wifi className="w-4 h-4 text-emerald-400" /> {safeRecords.length.toLocaleString()} REG
+            <div className="font-mono text-left">
+              <div className="flex items-center gap-2 text-[10px] text-cyan-300 font-bold">
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-cyan-400" /> {currentDateStr}</span>
+                <span className="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-400/40 text-[9px] font-black animate-pulse">
+                  ● EN VIVO
                 </span>
-                <div className="flex gap-1 mt-1">
-                  {[100, 85, 92, 70, 95, 80].map((w, i) => (
-                    <div key={i} className="w-4 h-1 bg-cyan-950 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-400" style={{ width: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
               </div>
-
-              <div className="flex items-center">
-                <Settings className="w-6 h-6 text-cyan-300 animate-spin" style={{ animationDuration: '10s' }} />
-                <Settings className="w-4 h-4 text-emerald-400 -ml-1 mt-3 animate-spin" style={{ animationDuration: '7s', animationDirection: 'reverse' }} />
-              </div>
-
-              <div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-cyan-500/40">
-                <div className="relative w-10 h-10 flex items-center justify-center">
-                  <svg className="w-10 h-10" viewBox="0 0 44 44">
-                    <circle cx="22" cy="22" r="19" stroke="#22d3ee" strokeWidth="1.2" strokeOpacity="0.5" fill="rgba(6,182,212,0.1)" />
-                    <circle cx="22" cy="22" r="12" stroke="#10b981" strokeWidth="1" strokeDasharray="3 3" fill="transparent" />
-                    <line x1="22" y1="3" x2="22" y2="41" stroke="#22d3ee" strokeOpacity="0.3" strokeWidth="0.8" />
-                    <line x1="3" y1="22" x2="41" y2="22" stroke="#22d3ee" strokeOpacity="0.3" strokeWidth="0.8" />
-                    <circle cx="28" cy="15" r="2.2" fill="#f43f5e" />
-                    <circle cx="15" cy="27" r="2" fill="#f59e0b" />
-                  </svg>
-                  <Radio className="w-3 h-3 text-cyan-200 absolute animate-pulse" />
-                </div>
-
-                <div className="font-mono text-[9px] leading-tight">
-                  <div className="flex items-center gap-1.5 text-cyan-200 font-bold">
-                    <span>SECTORES:</span>
-                    <span className="text-amber-300 font-black">{urbanizaciones.length}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-cyan-200 font-bold mt-0.5">
-                    <span>TIPOS:</span>
-                    <span className="text-emerald-300 font-black">{todasFrecuenciasModalidades.length}</span>
-                  </div>
-                  <div className="text-[8px] text-cyan-400 mt-0.5">
-                    {sectorLat.toFixed(4)}, {sectorLng.toFixed(4)}
-                  </div>
-                </div>
+              <div className="text-xl font-black text-cyan-100 tracking-wider drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+                {currentTime || '10:00:00'}
               </div>
             </div>
           </div>
 
-          <div className="flex-1 max-w-2xl w-full bg-gradient-to-r from-cyan-950 via-cyan-600/35 to-cyan-950 border-y-2 border-x border-cyan-300/90 rounded-xl px-4 py-2 text-center shadow-[0_0_35px_rgba(6,182,212,0.45)]">
-            <h1 className="text-xs sm:text-base md:text-lg font-black tracking-[0.12em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
-              SICEP: SISTEMA INTEGRADO DE CONTROL Y ESTADÍSTICA PATRULLERA
-            </h1>
-            <div className="flex flex-wrap items-center justify-center gap-2.5 text-[10px] font-mono text-cyan-200 mt-0.5">
-              <span className="bg-cyan-500/25 px-2.5 py-0.5 rounded border border-cyan-300/50 font-bold truncate max-w-[280px]">
-                OBJETIVO: {activeTitle}
-              </span>
-              <span>•</span>
-              <span>TURNO: {selectedTurno}</span>
+          {/* Módulo Central: Placa Holográfica con Título y Núcleo Energético */}
+          <div className="flex-1 max-w-3xl w-full bg-gradient-to-r from-cyan-950/70 via-cyan-600/25 to-cyan-950/70 border-y-2 border-x border-cyan-300/80 rounded-2xl px-6 py-2.5 text-center shadow-[0_0_40px_rgba(6,182,212,0.4),inset_0_0_20px_rgba(34,211,238,0.25)] relative overflow-hidden flex items-center justify-between">
+            <div className="absolute -left-10 top-0 bottom-0 w-20 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent blur-md pointer-events-none animate-pulse" />
+            <div className="absolute -right-10 top-0 bottom-0 w-20 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent blur-md pointer-events-none animate-pulse" />
+
+            <div className="w-10 h-10 rounded-full border border-cyan-400/60 bg-cyan-950 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.7)] shrink-0 hidden sm:flex">
+              <Atom className="w-5 h-5 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
+            </div>
+
+            <div className="flex-1 px-2 text-center">
+              <h1 className="text-xs sm:text-sm md:text-base font-black tracking-[0.14em] text-white uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]">
+                SICEP: SISTEMA INTEGRADO DE CONTROL Y ESTADÍSTICA PATRULLERA
+              </h1>
+              <div className="flex items-center justify-center gap-3 text-[10px] font-mono text-cyan-200 mt-0.5">
+                <span className="text-cyan-300 font-bold">OBJETIVO: {activeTitle}</span>
+                <span>•</span>
+                <span className="text-amber-300 font-bold">TURNO: {selectedTurno}</span>
+              </div>
+            </div>
+
+            <div className="w-10 h-10 rounded-full border border-cyan-400/60 bg-cyan-950 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.7)] shrink-0 hidden sm:flex">
+              <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full xl:w-auto justify-end">
+          {/* Módulo Derecho: Botones de Acción Futuristas & Telemetría */}
+          <div className="flex items-center gap-2.5 w-full xl:w-auto justify-end">
             <button
               onClick={handleResetAllFilters}
-              className="flex items-center gap-1.5 px-3 py-3 bg-rose-500/25 hover:bg-rose-500/40 border border-rose-400 rounded-xl text-rose-100 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.35)] cursor-pointer transition"
+              className="relative px-3.5 py-2.5 bg-[#0a192f] hover:bg-[#112240] border-2 border-rose-500/80 rounded-xl text-rose-300 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(244,63,94,0.3)] hover:shadow-[0_0_25px_rgba(244,63,94,0.6)] cursor-pointer transition flex items-center gap-1.5 group overflow-hidden"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-4 h-4 text-rose-400 group-hover:rotate-180 transition duration-500" />
               <span>BORRAR FILTROS</span>
             </button>
 
             <button
               onClick={() => setIsPreviewOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-3 bg-gradient-to-r from-emerald-500/40 to-cyan-500/40 hover:from-emerald-400/60 hover:to-cyan-400/60 border-2 border-emerald-300 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_25px_rgba(16,185,129,0.5)] cursor-pointer transition"
+              className="relative px-3.5 py-2.5 bg-[#0a2522] hover:bg-[#0f3833] border-2 border-emerald-400/90 rounded-xl text-emerald-200 text-xs font-mono font-black uppercase tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)] cursor-pointer transition flex items-center gap-1.5 group overflow-hidden"
             >
-              <Eye className="w-4 h-4 text-emerald-200" />
+              <Eye className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
               <span>VISTA PREVIA / PDF</span>
             </button>
           </div>
+
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -1634,39 +1630,39 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             </div>
 
             {/* ================================================================= */}
-            {/* MAPA TÁCTICO 3D CON BOTONES SUPERIORES FIJOS Y VISIBLES           */}
+            {/* MAPA TÁCTICO 3D CON CONTROLES SUPERIORES FIJOS                   */}
             {/* ================================================================= */}
             <div
               className={
                 isMapExpanded
-                  ? 'fixed inset-x-2 sm:inset-x-3 top-3 bottom-2 z-[9999] border-2 border-cyan-300 bg-[#041020] rounded-2xl p-2.5 sm:p-3 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
+                  ? 'fixed inset-x-2 sm:inset-x-3 top-2 bottom-2 z-[9999] border-2 border-cyan-300 bg-[#041020] rounded-2xl p-2 sm:p-2.5 flex flex-col shadow-[0_0_90px_rgba(6,182,212,0.85)]'
                   : 'border-2 border-cyan-400/80 bg-[#041020] rounded-xl p-2.5 relative overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.28)]'
               }
             >
-              <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2 px-0.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Crosshair className="w-4 h-4 text-cyan-300 shrink-0" />
-                  <span className="text-xs font-mono font-black text-white uppercase truncate max-w-[180px] sm:max-w-xs">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5 px-0.5 shrink-0 bg-[#051326]/90 p-1.5 rounded-lg border border-cyan-500/40">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Crosshair className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+                  <span className="text-[11px] font-mono font-black text-white uppercase truncate max-w-[160px] sm:max-w-xs">
                     {activeTitle}
                   </span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   {isMapExpanded && (
-                    <div className="flex items-center gap-1 bg-[#020813] p-1 rounded-lg border border-cyan-500/50">
-                      <MapIcon className="w-3.5 h-3.5 text-cyan-300 ml-1 mr-0.5 hidden md:block" />
+                    <div className="flex items-center gap-1 bg-[#020813] p-0.5 rounded border border-cyan-500/50">
+                      <MapIcon className="w-3 h-3 text-cyan-300 ml-1 mr-0.5 hidden md:block" />
                       {[
-                        { key: 'DARK_BLUE' as MapStyleKey, label: 'NOCTURNO AZUL' },
-                        { key: 'VOYAGER' as MapStyleKey, label: 'URBANO CLARO' },
-                        { key: 'ESRI_STREET' as MapStyleKey, label: 'MAPA VIAL' },
-                        { key: 'SATELLITE' as MapStyleKey, label: 'SATÉLITE 3D' }
+                        { key: 'DARK_BLUE' as MapStyleKey, label: 'NOCTURNO' },
+                        { key: 'VOYAGER' as MapStyleKey, label: 'CLARO' },
+                        { key: 'ESRI_STREET' as MapStyleKey, label: 'VIAL' },
+                        { key: 'SATELLITE' as MapStyleKey, label: 'SATÉLITE' }
                       ].map((m) => (
                         <button
                           key={m.key}
                           onClick={() => setExpandedMapStyle(m.key)}
-                          className={`px-2 py-1 rounded text-[9px] font-mono font-black uppercase cursor-pointer transition ${
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase cursor-pointer transition ${
                             expandedMapStyle === m.key
-                              ? 'bg-cyan-400 text-slate-950 shadow-[0_0_10px_rgba(34,211,238,0.7)]'
+                              ? 'bg-cyan-400 text-slate-950 shadow-[0_0_8px_rgba(34,211,238,0.7)]'
                               : 'text-cyan-200 hover:bg-cyan-900/50'
                           }`}
                         >
@@ -1679,9 +1675,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   {hasActiveMapFilter && (
                     <button
                       onClick={handleClearMapFilter}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/35 hover:bg-rose-500/55 border border-rose-300 text-rose-100 text-[9px] sm:text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(244,63,94,0.45)]"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/35 hover:bg-rose-500/55 border border-rose-300 text-rose-100 text-[9px] font-mono font-black uppercase cursor-pointer transition"
                     >
-                      <FilterX className="w-3.5 h-3.5" />
+                      <FilterX className="w-3 h-3" />
                       <span>BORRAR FILTRO</span>
                     </button>
                   )}
@@ -1691,12 +1687,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                       setIsMapExpanded((prev) => !prev);
                       setIsPointsPanelMinimized(false);
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-400/40 border border-cyan-300 text-cyan-100 text-[9px] sm:text-[10px] font-mono font-black uppercase cursor-pointer transition shadow-[0_0_12px_rgba(34,211,238,0.45)] shrink-0"
+                    className="flex items-center gap-1 px-3 py-1 rounded bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 text-[10px] font-mono font-black uppercase cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.6)] transition shrink-0"
                   >
                     {isMapExpanded ? (
                       <>
-                        <Minimize2 className="w-3.5 h-3.5 text-amber-300" />
-                        <span>SALIR</span>
+                        <Minimize2 className="w-3.5 h-3.5 text-slate-950" />
+                        <span>SALIR (VOLVER)</span>
                       </>
                     ) : (
                       <>
@@ -1847,22 +1843,38 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   </div>
                 )}
 
+                {/* TARJETA FLOTANTE CON NOMBRE DE SERENO Y HALCÓN / UNIDAD */}
                 {selectedPointObj && (
-                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-10 border-2 border-cyan-300 bg-[#051326]/95 backdrop-blur-md rounded-xl px-3.5 py-2.5 min-w-[240px] max-w-sm shadow-[0_0_25px_rgba(34,211,238,0.6)]">
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <span className="text-[10px] font-mono font-black text-amber-300 uppercase">
-                        PUNTO CRÍTICO #{selectedPointObj.index}
+                  <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-10 border-2 border-cyan-300 bg-[#051326]/95 backdrop-blur-md rounded-xl px-4 py-3 min-w-[280px] max-w-sm shadow-[0_0_30px_rgba(34,211,238,0.7)] font-mono">
+                    <div className="flex items-center justify-between gap-3 mb-1.5 border-b border-cyan-500/30 pb-1">
+                      <span className="text-[10px] font-black text-amber-300 uppercase">
+                        INTERVENCIÓN CRÍTICA #{selectedPointObj.index}
                       </span>
                       <button onClick={() => setSelectedPinId(null)} className="text-cyan-400 hover:text-white cursor-pointer">
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="text-xs font-mono font-black text-white leading-tight mb-1">
+
+                    <div className="text-xs font-black text-white leading-tight mb-2">
                       {selectedPointObj.modalidad}
                     </div>
-                    <div className="text-[10px] font-mono text-cyan-200">
-                      <div>SECTOR: {selectedPointObj.lugar}</div>
-                      <div>TURNO: {selectedPointObj.turno} • MÓVIL: {selectedPointObj.vehiculo}</div>
+
+                    <div className="space-y-1 text-[10px] bg-[#020813] p-2 rounded-lg border border-cyan-500/40">
+                      <div className="flex items-center gap-2 text-cyan-100">
+                        <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-cyan-400">SERENO:</span>
+                        <span className="font-bold text-white truncate">{selectedPointObj.agente}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-cyan-100">
+                        <Truck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span className="text-cyan-400">UNIDAD / HALCÓN:</span>
+                        <span className="font-bold text-amber-300 truncate">{selectedPointObj.vehiculo}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-[9px] text-cyan-300 mt-2 flex justify-between">
+                      <span>SECTOR: {selectedPointObj.lugar}</span>
+                      <span>TURNO: {selectedPointObj.turno}</span>
                     </div>
                   </div>
                 )}
