@@ -421,4 +421,4 @@ export default function ComparativoView({ records }: ComparativoViewProps) {
       </div>
     </div>
   );
-};
+}
