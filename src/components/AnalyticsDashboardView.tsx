@@ -8,7 +8,7 @@ interface AnalyticsDashboardViewProps {
 interface BeveledBarItem {
   label: string;
   count: number;
-  pct: number;
+  pct: number; 
 }
 
 interface BeveledBarChartProps {
