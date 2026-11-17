@@ -25,8 +25,14 @@ interface DetalleIncidenciasViewProps {
   lastSavedAt?: string | null;
 }
 
-export const DetalleIncidenciasView: React.FC<DetalleIncidenciasViewProps> = ({
+export default function DetalleIncidenciasView({
   records,
+  onDeleteRecord,
+  onViewOnMap,
+  onSaveChanges,
+  hasUnsavedChanges,
+  lastSavedAt
+}: DetalleIncidenciasViewProps) {  records,
   onDeleteRecord,
   onViewOnMap,
   onSaveChanges,
