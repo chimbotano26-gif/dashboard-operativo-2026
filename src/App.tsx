@@ -27,6 +27,7 @@ import { PlanOperativosView } from './components/PlanOperativosView';
 import ComparativoView from './components/ComparativoView';
 import { DetalleIncidenciasView } from './components/DetalleIncidenciasView';
 import { DatabaseExcelHub } from './components/DatabaseExcelHub';
+
 // COMPONENTE INTRO: HUD 3D Y TELEMETRÍA SEGURA
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = useState<boolean>(false);
@@ -216,15 +217,8 @@ function DashboardInner() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('ANALITICA');
   const [records, setRecords] = useState<IncidentRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [filters, setFilters] = useState<FilterState>({
-    meses: [],
-    turnos: [],
-    zonas: [],
-    subsectores: [],
-    comisarias: [],
-    searchQuery: '',
-    dateRange: { start: '', end: '' }
-  });
+  const [isCustomDataLoaded, setIsCustomDataLoaded] = useState<boolean>(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -242,20 +236,52 @@ function DashboardInner() {
     loadData();
   }, []);
 
+  const handleDataImported = (newRecords: IncidentRecord[]) => {
+    setRecords(newRecords);
+    setIsCustomDataLoaded(true);
+    setLastSavedAt(new Date().toLocaleTimeString());
+  };
+
+  const handleResetToDefault = async () => {
+    setLoading(true);
+    const data = await fetchAllRegistrosFromSupabase();
+    if (data) setRecords(data);
+    setIsCustomDataLoaded(false);
+    setLoading(false);
+  };
+
+  const handleDeleteRecord = (id: string) => {
+    setRecords((prev) => prev.filter((r) => r.id !== id));
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         recordCount={records.length} 
       />
-      <main className="p-4">
+      <main className="flex-1 p-4 flex flex-col">
         {activeTab === 'ANALITICA' && <AnalyticsDashboardView records={records} />}
         {activeTab === 'MAPA_CALOR' && <TacticalMapView records={records} />}
         {activeTab === 'PLAN_OPERATIVO' && <PlanOperativosView />}
         {activeTab === 'COMPARATIVO' && <ComparativoView records={records} />}
-        {activeTab === 'DETALLE' && <DetalleIncidenciasView records={records} />}
-        {activeTab === 'EXCEL_HUB' && <DatabaseExcelHub />}
+        {activeTab === 'DETALLE' && (
+          <DetalleIncidenciasView 
+            records={records} 
+            onDeleteRecord={handleDeleteRecord} 
+          />
+        )}
+        {activeTab === 'EXCEL_HUB' && (
+          <DatabaseExcelHub 
+            records={records}
+            isCustomDataLoaded={isCustomDataLoaded}
+            onDataImported={handleDataImported}
+            onResetToDefault={handleResetToDefault}
+            onDeleteRecord={handleDeleteRecord}
+            lastSavedAt={lastSavedAt}
+          />
+        )}
       </main>
     </div>
   );
