@@ -18,15 +18,15 @@ import {
   SUPABASE_URL, SUPABASE_TABLE 
 } from './utils/supabaseClient';
 
-// Componentes
-import Header from './components/Header';
-import AnalyticsDashboardView from './components/AnalyticsDashboardView';
-import TacticalMapView from './components/TacticalMapView';
+// Componentes (importados correctamente con corchetes para exportaciones nombradas)
+import { Header } from './components/Header';
+import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
+import { TacticalMapView } from './components/TacticalMapView';
 import MapErrorBoundary from './components/MapErrorBoundary';
-import PlanOperativosView from './components/PlanOperativosView';
+import { PlanOperativosView } from './components/PlanOperativosView';
 import ComparativoView from './components/ComparativoView';
-import DetalleIncidenciasView from './components/DetalleIncidenciasView';
-import DatabaseExcelHub from './components/DatabaseExcelHub';
+import { DetalleIncidenciasView } from './components/DetalleIncidenciasView';
+import { DatabaseExcelHub } from './components/DatabaseExcelHub';
 
 // COMPONENTE INTRO: HUD 3D Y TELEMETRÍA SEGURA
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
@@ -272,9 +272,7 @@ export default function App() {
         <IntroSplashView onEnterDashboard={() => setShowIntro(false)} />
       ) : (
         <AuthProvider>
-          <CustomTitlesProvider>
-            <DashboardInner />
-          </CustomTitlesProvider>
+          <DashboardInner />
         </AuthProvider>
       )}
     </>
