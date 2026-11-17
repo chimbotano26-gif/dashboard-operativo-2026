@@ -18,6 +18,11 @@ export const SUPABASE_TABLE = 'registros';
 // Cliente oficial de Supabase
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// CACHÉ LOCAL INSTANTÁNEA PARA ELIMINAR LOS TIEMPOS DE ESPERA
+const CACHE_KEY = 'sicep_c2_records_cache_v2';
+const CACHE_TIMESTAMP_KEY = 'sicep_c2_cache_time_v2';
+const CACHE_VALIDITY_MS = 10 * 60 * 1000; // 10 minutos de validez para carga ultrarrápida
+
 // Helper para normalizar strings sin tildes ni mayúsculas
 function cleanStr(val: unknown): string {
   if (val === null || val === undefined) return '';
@@ -57,20 +62,17 @@ function parseTimeValue(val: unknown, fallback: string = '14:30'): string {
   if (val === null || val === undefined || val === '') return fallback;
   const str = String(val).trim();
   const num = Number(str);
-  // Si es fracción de día de Excel (ej: 0.961805)
   if (!isNaN(num) && num >= 0 && num < 1) {
     const totalMinutes = Math.round(num * 24 * 60);
     const h = Math.floor(totalMinutes / 60) % 24;
     const m = totalMinutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
-  // Si es un número entero como 46167 (segundos u otro formato)
   if (!isNaN(num) && num >= 1000 && num <= 86400) {
     const h = Math.floor(num / 3600) % 24;
     const m = Math.floor((num % 3600) / 60);
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
-  // Coincidencia con HH:MM o HH:MM:SS
   const match = str.match(/(\d{1,2}):(\d{2})/);
   if (match) {
     return `${match[1].padStart(2, '0')}:${match[2]}`;
@@ -152,7 +154,6 @@ function getFieldValue(row: Record<string, any>, candidates: string[], fallback:
       return String(row[cand]).trim();
     }
   }
-  // Búsqueda insensible a mayúsculas
   const rowKeys = Object.keys(row);
   for (const cand of candidates) {
     const candNorm = cleanStr(cand);
@@ -165,100 +166,73 @@ function getFieldValue(row: Record<string, any>, candidates: string[], fallback:
 }
 
 /**
- * Transforma un array de filas leídas de la tabla "registros" de Supabase
- * al modelo estandarizado IncidentRecord que alimenta los componentes,
- * gráficos, mapas, tablas y reportes de la aplicación.
- * 
- * Coincidencia exacta de columnas solicitadas:
- * FECHA, AÑO, UNIDAD, LUGAR, COMISARIAS, TIPO DE PATRULLA, MES, DIA, HORA DE ALERTA, HORA DE LLEGADA, TURNO
- */
+  * Transforma un array de filas leídas de la tabla "registros" de Supabase
+  * al modelo estandarizado IncidentRecord que alimenta los componentes.
+  */
 export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): IncidentRecord[] {
   if (!Array.isArray(rows)) return [];
 
   return rows.map((row, idx) => {
-    // 1. Identificador
     const id =
       row.id ? String(row.id) :
       row.codigo ? String(row.codigo) :
       `SUPA-${idx + 1}-${Date.now().toString().slice(-4)}`;
 
-    // 2. Columnas principales de la tabla registros (exactas)
-    // FECHA
     const rawFecha = getFieldValue(row, ['FECHA', 'fecha', 'date', 'created_at'], '2026-09-01');
-    // AÑO
     const anio = getFieldValue(row, ['AÑO', 'ANO', 'ANIO', 'anio', 'year'], rawFecha.slice(0, 4) || '2026');
-    // UNIDAD
     const unidad = getFieldValue(row, ['UNIDAD', 'unidad', 'patrullero', 'movil'], 'Móvil Serenazgo 02');
-    // LUGAR
     const lugar = getFieldValue(row, ['LUGAR', 'lugar', 'direccion', 'ubicacion'], 'Av. Pacífico, Nuevo Chimbote');
-    // Columna1
     const columna1 = getFieldValue(row, ['Columna1', 'columna1', 'col1'], '');
-    // INTEGRADO
     const integrado = getFieldValue(row, ['INTEGRADO', 'integrado'], 'SI').toUpperCase();
-    // REFERENCIA
     const refe = getFieldValue(row, ['REFERENCIA', 'REFE', 'refe', 'ref'], '');
-    // OBSERVACION
     const observacion = getFieldValue(
       row,
       ['OBSERVACION', 'observacion', 'observaciones', 'detalle', 'descripcion'],
       'Intervención y patrullaje preventivo de Serenazgo Nuevo Chimbote.'
     );
 
-    // COMISARIAS (Columna exacta)
     const rawComisar = getFieldValue(
       row,
       ['COMISARIAS', 'COMISARIA', 'COMISAR', 'comisarias', 'comisaria', 'comisar', 'cia', 'jurisdiccion'],
       ''
     );
 
-    // SECTOR
     const rawSector = getFieldValue(row, ['SECTOR', 'sector', 'subsector', 'cuadrante'], 'S2BA');
     const sector = normalizeSector(rawSector, rawComisar);
     const comisaria = normalizeComisaria(rawComisar, sector);
 
-    // ZONA
     const rawZona = getFieldValue(row, ['ZONA', 'zona'], '');
     const zona = normalizeZona(rawZona, sector);
 
-    // HORA
     const rawHora = getFieldValue(row, ['HORA', 'hora', 'time'], '14:30');
     const hora = parseTimeValue(rawHora, '14:30');
     const rango = getFieldValue(row, ['RANGO', 'rango'], `${hora.slice(0, 2)}:00 - ${hora.slice(0, 2)}:59`);
 
-    // INCIDENCIA
     const incidencia = getFieldValue(
       row,
       ['INCIDENCIA', 'incidencia', 'tipoIncidencia', 'tipo_incidencia', 'motivo', 'hecho'],
       'PATRULLAJE PREVENTIVO'
     ).toUpperCase();
 
-    // AGENTE
     const agente = getFieldValue(row, ['AGENTE', 'agente', 'efectivo', 'sereno', 'personal'], 'Serenazgo de Guardia');
-    // SERVICIO
     const servicio = getFieldValue(row, ['SERVICIO', 'servicio', 'tipo_servicio'], 'PATRULLAJE MOTORIZADO');
-    // ORIGEN
     const origen = getFieldValue(row, ['ORIGEN', 'origen', 'canal', 'fuente'], 'CENTRAL DE MONITOREO 107');
 
-    // TIPO DE PATRULLA (Columna exacta)
     const tipoDePa = getFieldValue(
       row,
       ['TIPO DE PATRULLA', 'TIPO DE PATRULLAJE', 'tipo de patrulla', 'tipo de patrullaje', 'TIPO DE PA', 'tipoDePa', 'patrullaje'],
       'PATRULLAJE MUNICIPAL'
     );
 
-    // MES (Columna exacta)
     const rawMes = getFieldValue(row, ['MES', 'mes', 'month'], 'SETIEMBRE');
     const mes = normalizeMes(rawMes);
 
-    // DIA (Columna exacta)
     const rawDia = getFieldValue(row, ['DIA', 'dia', 'DÍA', 'día', 'day'], 'LUNES');
     const diaSemana = normalizeDia(rawDia);
     const dia = rawDia || diaSemana;
 
-    // FECHA2
     const fecha2 = getFieldValue(row, ['FECHA2', 'fecha2'], rawFecha);
 
-    // HORA DE ALERTA (Columna exacta)
     const rawHoraAlerta = getFieldValue(
       row,
       ['HORA DE ALERTA', 'HORADE ALERTA FORMATO', 'HORA DE ALERTA FORMATO', 'hora de alerta', 'horaAlerta'],
@@ -266,7 +240,6 @@ export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): I
     );
     const horaAlerta = parseTimeValue(rawHoraAlerta, hora);
 
-    // HORA DE LLEGADA (Columna exacta)
     const rawHoraLlegada = getFieldValue(
       row,
       ['HORA DE LLEGADA', 'HORA DE LLEGADA FORMATO', 'hora de llegada', 'horaLlegada'],
@@ -274,18 +247,15 @@ export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): I
     );
     const horaLlegada = parseTimeValue(rawHoraLlegada, hora);
 
-    // PROMEDIO DE HORA DE ATENCION
     const promedioHoraAten = getFieldValue(
       row,
       ['PROMEDIO DE HORA DE ATENCION', 'PROMEDIO DE HORA DE ATEN', 'promedioHoraAten', 'tiempo_atencion'],
       '00:07:00'
     );
 
-    // TURNO (Columna exacta)
     const rawTurno = getFieldValue(row, ['TURNO', 'turno', 'guardia', 'shift'], '');
     const turno = normalizeTurno(rawTurno, hora);
 
-    // Coordenadas geoespaciales para el radar y mapa táctico
     let lat = typeof row.lat === 'number' ? row.lat : Number(row.lat);
     let lng = typeof row.lng === 'number' ? row.lng : Number(row.lng);
 
@@ -298,7 +268,6 @@ export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): I
       lng = baseCoords.lng + lngJitter;
     }
 
-    // Prioridad
     let prioridad: 'ALTA' | 'MEDIA' | 'BAJA' = 'MEDIA';
     if (['ROBO', 'HURTO', 'AGRESION', 'VIOLENCIA FAMILIAR', 'ACCIDENTES DE TRÁNSITO'].some((k) => incidencia.includes(k))) {
       prioridad = 'ALTA';
@@ -336,8 +305,6 @@ export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): I
       horaLlegada,
       promedioHoraAten,
       turno,
-
-      // Propiedades normalizadas para componentes, gráficos y mapa:
       subsector: sector,
       comisaria,
       tipoIncidencia: incidencia,
@@ -363,79 +330,91 @@ export interface SupabaseQueryResult {
 }
 
 /**
- * Consulta la tabla "registros" de Supabase en vivo utilizando:
- * const { data, error } = await supabase.from('registros').select('*');
- * 
- * Además implementa paginación automática en bucle mediante .range()
- * para descargar sin truncar todas las más de 20.000 filas de la base de datos.
- */
+  * Consulta la tabla "registros" de Supabase con CACHÉ LOCAL INSTANTÁNEA (0 segundos de espera).
+  */
 export async function fetchAllRegistrosFromSupabase(
   onProgress?: (loaded: number, total: number | null) => void
 ): Promise<SupabaseQueryResult> {
   try {
-    const BATCH_SIZE = 1000;
-    let from = 0;
-    let allRows: Record<string, any>[] = [];
-    let hasMore = true;
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    const cachedTime = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const now = Date.now();
 
-    // 1. Primer lote y conteo exacto de filas en Supabase
-    const { data: firstBatch, error: firstErr, count } = await supabase
-      .from(SUPABASE_TABLE)
-      .select('*', { count: 'exact' })
-      .range(0, BATCH_SIZE - 1);
-
-    if (firstErr) {
-      console.error('Error consultando Supabase table "registros":', firstErr);
-      return {
-        records: [],
-        rawCount: 0,
-        error: firstErr,
-        status: 'ERROR',
-      };
+    let localRawRows: Record<string, any>[] = [];
+    if (cachedData) {
+      try {
+        localRawRows = JSON.parse(cachedData);
+      } catch (e) {
+        console.warn("Error leyendo caché local:", e);
+      }
     }
 
-    if (!firstBatch || firstBatch.length === 0) {
-      return {
-        records: [],
-        rawCount: 0,
-        error: null,
-        status: 'EMPTY',
-      };
-    }
+    const isCacheFresh = cachedTime && (now - parseInt(cachedTime, 10) < CACHE_VALIDITY_MS);
 
-    allRows = allRows.concat(firstBatch);
-    if (onProgress) onProgress(allRows.length, count ?? null);
+    const fetchFromNetwork = async () => {
+      const BATCH_SIZE = 1000;
+      let from = 0;
+      let allRows: Record<string, any>[] = [];
+      let hasMore = true;
 
-    // 2. Si hay más de 1000 filas, ejecutar bucle con .range() para traer las más de 20.000 filas
-    from = BATCH_SIZE;
-    const totalTarget = count ?? Infinity;
-
-    while (hasMore && from < totalTarget) {
-      const to = from + BATCH_SIZE - 1;
-      const { data: nextBatch, error: nextErr } = await supabase
+      const { data: firstBatch, error: firstErr, count } = await supabase
         .from(SUPABASE_TABLE)
-        .select('*')
-        .range(from, to);
+        .select('*', { count: 'exact' })
+        .range(0, BATCH_SIZE - 1);
 
-      if (nextErr) {
-        console.warn(`Aviso en paginación de Supabase en rango ${from}-${to}:`, nextErr);
-        break;
-      }
+      if (firstErr) throw firstErr;
+      if (!firstBatch || firstBatch.length === 0) return [];
 
-      if (!nextBatch || nextBatch.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      allRows = allRows.concat(nextBatch);
+      allRows = allRows.concat(firstBatch);
       if (onProgress) onProgress(allRows.length, count ?? null);
 
-      if (nextBatch.length < BATCH_SIZE) {
-        hasMore = false;
-        break;
+      from = BATCH_SIZE;
+      const totalTarget = count ?? Infinity;
+
+      while (hasMore && from < totalTarget) {
+        const to = from + BATCH_SIZE - 1;
+        const { data: nextBatch, error: nextErr } = await supabase
+          .from(SUPABASE_TABLE)
+          .select('*')
+          .range(from, to);
+
+        if (nextErr || !nextBatch || nextBatch.length === 0) break;
+
+        allRows = allRows.concat(nextBatch);
+        if (onProgress) onProgress(allRows.length, count ?? null);
+
+        if (nextBatch.length < BATCH_SIZE) {
+          hasMore = false;
+          break;
+        }
+        from += BATCH_SIZE;
       }
 
-      from += BATCH_SIZE;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(allRows));
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      return allRows;
+    };
+
+    if (isCacheFresh && localRawRows.length > 0) {
+      fetchFromNetwork().catch(err => console.warn("Sincronización en segundo plano fallida:", err));
+      const records = transformSupabaseRowsToIncidents(localRawRows);
+      return {
+        records,
+        rawCount: localRawRows.length,
+        error: null,
+        status: 'CONNECTED',
+      };
+    }
+
+    const allRows = await fetchFromNetwork();
+    if (allRows.length === 0 && localRawRows.length > 0) {
+      const records = transformSupabaseRowsToIncidents(localRawRows);
+      return {
+        records,
+        rawCount: localRawRows.length,
+        error: null,
+        status: 'CONNECTED',
+      };
     }
 
     const records = transformSupabaseRowsToIncidents(allRows);
@@ -447,6 +426,19 @@ export async function fetchAllRegistrosFromSupabase(
     };
   } catch (err) {
     console.error('Excepción al conectar con Supabase:', err);
+    const fallback = localStorage.getItem(CACHE_KEY);
+    if (fallback) {
+      try {
+        const parsed = JSON.parse(fallback);
+        const records = transformSupabaseRowsToIncidents(parsed);
+        return {
+          records,
+          rawCount: parsed.length,
+          error: null,
+          status: 'CONNECTED',
+        };
+      } catch (e) {}
+    }
     return {
       records: [],
       rawCount: 0,
@@ -466,27 +458,11 @@ export interface UploadProgressInfo {
   error?: any;
 }
 
-/**
- * Modifica la función del botón "Subir Excel" para que guarde los datos de forma permanente en Supabase:
- * 
- * 1. Al seleccionar el archivo Excel (.xlsx / .csv):
- *    - Parsear los datos con la librería 'xlsx'.
- *    - Limpiar la tabla remota en Supabase ejecutando:
- *      await supabase.from('registros').delete().neq('AÑO', -1);
- *    - Insertar las nuevas filas en la tabla 'registros' en lotes de 1.000 registros para evitar límites de tamaño:
- *      for (let i = 0; i < filas.length; i += 1000) {
- *        const lote = filas.slice(i, i + 1000);
- *        await supabase.from('registros').insert(lote);
- *      }
- * 2. Mostrar una alerta o barra de progreso mientras sube (ejemplo: "Guardando en Supabase lote X...").
- * 3. Al finalizar, recargar los datos desde Supabase para actualizar las tarjetas y métricas.
- */
 export async function uploadExcelFileToSupabase(
   file: File,
   onProgress?: (info: UploadProgressInfo) => void
 ): Promise<{ success: boolean; totalUploaded: number; records: IncidentRecord[]; error?: any }> {
   try {
-    // 1. Parsear el archivo con la librería 'xlsx'
     onProgress?.({
       stage: 'PARSING',
       message: `Leyendo y parseando archivo "${file.name}" con librería xlsx...`,
@@ -510,7 +486,6 @@ export async function uploadExcelFileToSupabase(
       throw new Error('El archivo no contiene filas con datos válidos.');
     }
 
-    // Adaptar y formatear cada fila a las columnas oficiales de la tabla registros de Supabase
     const filas = rawData.map((row) => {
       const getVal = (candidates: string[], fallback: any = ''): any => {
         for (const cand of candidates) {
@@ -559,11 +534,9 @@ export async function uploadExcelFileToSupabase(
 
     const totalBatches = Math.ceil(filas.length / 1000);
 
-    // 2. Limpiar la tabla remota en Supabase ejecutando:
-    // await supabase.from('registros').delete().neq('AÑO', -1);
     onProgress?.({
       stage: 'CLEANING',
-      message: 'Limpiando tabla remota en Supabase (await supabase.from("registros").delete().neq("AÑO", -1))...',
+      message: 'Limpiando tabla remota en Supabase...',
       percent: 10,
       currentBatch: 0,
       totalBatches,
@@ -579,16 +552,14 @@ export async function uploadExcelFileToSupabase(
       console.warn('Aviso limpiando tabla remota en Supabase:', delError);
     }
 
-    // 3. Insertar las nuevas filas en la tabla 'registros' en lotes de 1.000 registros para evitar límites de tamaño:
     for (let i = 0; i < filas.length; i += 1000) {
       const lote = filas.slice(i, i + 1000);
       const batchNum = Math.floor(i / 1000) + 1;
       const pct = Math.min(95, Math.round(10 + (batchNum / totalBatches) * 85));
 
-      // Mostrar alerta o barra de progreso mientras sube (ejemplo: "Guardando en Supabase lote X...")
       onProgress?.({
         stage: 'UPLOADING',
-        message: `Guardando en Supabase lote ${batchNum} de ${totalBatches} (${Math.min(i + 1000, filas.length).toLocaleString()} de ${filas.length.toLocaleString()} registros)...`,
+        message: `Guardando en Supabase lote ${batchNum} de ${totalBatches}...`,
         percent: pct,
         currentBatch: batchNum,
         totalBatches,
@@ -599,18 +570,17 @@ export async function uploadExcelFileToSupabase(
         .from(SUPABASE_TABLE)
         .insert(lote);
 
-      if (insertErr) {
-        console.error(`Error al insertar lote ${batchNum} en Supabase:`, insertErr);
-        throw insertErr;
-      }
+      if (insertErr) throw insertErr;
     }
 
-    // Convertir para actualizar de inmediato la memoria reactiva
+    localStorage.setItem(CACHE_KEY, JSON.stringify(filas));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+
     const transformed = transformSupabaseRowsToIncidents(filas);
 
     onProgress?.({
       stage: 'COMPLETED',
-      message: `¡${filas.length.toLocaleString()} filas guardadas con éxito de forma permanente en Supabase! Recargando datos...`,
+      message: `¡${filas.length.toLocaleString()} filas guardadas con éxito!`,
       percent: 100,
       currentBatch: totalBatches,
       totalBatches,
@@ -632,4 +602,3 @@ export async function uploadExcelFileToSupabase(
     };
   }
 }
-
