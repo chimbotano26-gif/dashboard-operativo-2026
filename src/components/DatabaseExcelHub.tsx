@@ -79,7 +79,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
 
-  // Matriz de datos consolidada anual 2026 (tipo Imagen 2)
+  // Matriz de datos consolidada anual 2026
   const annualData = useMemo(() => {
     return getAnnualConsolidatedData(records);
   }, [records]);
@@ -121,16 +121,16 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
     setSuccessMsg(null);
 
     try {
-      const records = await parseAndConvertExcel(file);
-      if (!records || records.length === 0) {
+      const recordsParsed = await parseAndConvertExcel(file);
+      if (!recordsParsed || recordsParsed.length === 0) {
         setErrorMsg('No se encontraron registros legibles en el archivo. Verifique el formato.');
         setLoading(false);
         return;
       }
 
-      onDataImported(records, false);
+      onDataImported(recordsParsed, false);
       setSuccessMsg(
-        `¡Éxito! Se cargaron ${records.length} atenciones desde "${file.name}". Todo el sistema y mapa de calor se han sincronizado con su base de datos.`
+        `¡Éxito! Se cargaron ${recordsParsed.length} atenciones desde "${file.name}". Todo el sistema y mapa de calor se han sincronizado con su base de datos.`
       );
       setLoading(false);
     } catch (err: any) {
@@ -204,7 +204,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
                     : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                 }`}
               >
-                {isCustomDataLoaded ? 'BASE PERSONALIZADA' : 'OFICIAL 2026 (1,804 OPS)'}
+                {isCustomDataLoaded ? 'BASE PERSONALIZADA' : 'OFICIAL 2026'}
               </span>
             </div>
             <EditableText
@@ -223,7 +223,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* BOTONES OFICIALES: CONSOLIDADO GENERAL ANUAL */}
           <button
             onClick={() => exportAnnualConsolidatedExcel(annualData)}
             className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(16,185,129,0.3)] active:scale-95 border border-emerald-400"
@@ -251,17 +250,15 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
             <span>Ver Matriz Anual</span>
           </button>
 
-          {/* BOTÓN OFICIAL: SUBIR ARCHIVO EXCEL */}
           <button
             onClick={onOpenUploadModal ? onOpenUploadModal : () => document.getElementById('excel-file-input')?.click()}
             className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] active:scale-95 border border-cyan-400"
-            title="Subir archivo Excel oficial (.xlsx / .xls) para alimentar el sistema"
+            title="Subir archivo Excel oficial (.xlsx / .xls)"
           >
             <Upload className="w-4 h-4 text-cyan-200" />
             <span>SUBIR EXCEL (BD)</span>
           </button>
 
-          {/* BOTÓN OFICIAL: GUARDAR CAMBIOS */}
           {onSaveChanges && (
             <button
               onClick={onSaveChanges}
@@ -270,7 +267,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
                   ? 'bg-gradient-to-r from-amber-500 to-orange-600 border-amber-300 ring-2 ring-amber-400/50 animate-pulse'
                   : 'bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 border-emerald-400/70 shadow-emerald-950/40'
               }`}
-              title="Guardar de forma permanente en el navegador para que no sea necesario volver a meter datos al entrar al aplicativo"
+              title="Guardar de forma permanente en el navegador"
             >
               <Save className="w-4 h-4 text-emerald-200" />
               <span>Guardar Cambios en Sistema</span>
@@ -280,7 +277,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
           <button
             onClick={generateSampleTemplateExcel}
             className="px-3 py-1.5 rounded-lg bg-[#061324] hover:bg-[#091b33] border border-cyan-700/60 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition-colors shadow"
-            title="Descargar plantilla de Excel con formato de Nuevo Chimbote"
+            title="Descargar plantilla de Excel"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Descargar Plantilla</span>
@@ -289,7 +286,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
           <button
             onClick={() => exportBackupSnapshot(records)}
             className="px-3 py-1.5 rounded-lg bg-[#07203a] hover:bg-[#0b2b4d] border border-cyan-500/40 text-cyan-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow"
-            title="Descargar copia de seguridad JSON portable"
           >
             <Download className="w-3.5 h-3.5 text-cyan-400" />
             <span>Respaldo JSON</span>
@@ -298,7 +294,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
           <label
             htmlFor="json-backup-input"
             className="px-3 py-1.5 rounded-lg bg-[#07203a] hover:bg-[#0b2b4d] border border-cyan-500/40 text-cyan-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow cursor-pointer"
-            title="Restaurar copia de seguridad JSON"
           >
             <Upload className="w-3.5 h-3.5 text-cyan-400" />
             <span>Cargar Respaldo</span>
@@ -322,9 +317,8 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
           <button
             onClick={onResetToDefault}
             className="px-3.5 py-1.5 rounded-lg bg-cyan-900/90 hover:bg-cyan-800 border border-cyan-400 text-cyan-100 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95"
-            title="Consultar y sincronizar con la base de datos Supabase en vivo (tabla registros)"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-cyan-300 animate-spin-hover" />
+            <RefreshCw className="w-3.5 h-3.5 text-cyan-300" />
             <span>Sincronizar Supabase</span>
           </button>
 
@@ -384,7 +378,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
             {loading ? 'Procesando archivo Excel...' : 'Arrastre aquí su archivo Excel o haga clic para seleccionarlo'}
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl mx-auto">
-            El sistema detecta automáticamente tus <strong>25 columnas oficiales</strong>: FECHA, AÑO, UNIDAD, LUGAR, Columna1, INTEGRADO, REFE, OBSERVACION, SECTOR, ZONA, HORA, RANGO, INCIDENCIA, AGENTE, SERVICIO, ORIGEN, COMISAR, TIPO DE PA, MES, DIA, FECHA2, HORA DE ALERTA, HORA DE LLEGADA, PROMEDIO DE ATENCIÓN y TURNO.
+            El sistema detecta automáticamente las columnas oficiales de la Sub Gerencia de Serenazgo de Nuevo Chimbote.
           </p>
         </div>
 
@@ -396,7 +390,7 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
         </label>
       </div>
 
-      {/* Sub-navegación entre Registros Detallados y Consolidado General Anual */}
+      {/* Sub-navegación */}
       <div className="flex items-center gap-2 border-b border-cyan-900/60 pb-2 flex-wrap">
         <button
           onClick={() => setHubTab('REGISTROS')}
@@ -424,7 +418,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
       </div>
 
       {hubTab === 'CONSOLIDADO' ? (
-        /* VISTA DE LA MATRIZ CONSOLIDADA ANUAL (TIPO IMAGEN 2) */
         <div className="bg-[#0a182d] rounded-xl border-2 border-cyan-500/40 p-4 shadow-xl flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-cyan-900/60">
             <div>
@@ -452,7 +445,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
               <button
                 onClick={() => exportAnnualConsolidatedExcel(annualData)}
                 className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
-                title="Exportar Consolidado Anual a Excel (.xlsx)"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 <span>Exportar Consolidado Anual a Excel</span>
@@ -461,7 +453,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
               <button
                 onClick={() => exportAnnualConsolidatedPDF(annualData)}
                 className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
-                title="Exportar a PDF oficial"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Exportar a PDF</span>
@@ -469,7 +460,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
             </div>
           </div>
 
-          {/* TABLA DE LA MATRIZ CRUZADA */}
           <div className="overflow-x-auto border border-cyan-900/60 rounded-lg bg-[#050e1a]">
             <table className="w-full text-left text-[11px] border-collapse min-w-[980px]">
               <thead>
@@ -521,7 +511,6 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
                 ))}
               </tbody>
               <tfoot>
-                {/* 1. TOTAL DE INCIDENCIAS POR MES */}
                 <tr className="bg-gradient-to-r from-blue-950 via-indigo-950 to-blue-950 text-white font-black border-t-2 border-cyan-600 text-[11px]">
                   <td className="p-2 border-r border-cyan-800"></td>
                   <td className="p-2 uppercase tracking-wider border-r border-cyan-800 text-cyan-200">
@@ -539,33 +528,13 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
                     100.00%
                   </td>
                 </tr>
-                {/* 2. FILA DE PORCENTAJES */}
-                <tr className="bg-[#050e1a] text-slate-300 font-black border-t border-cyan-900 text-[10px]">
-                  <td className="p-1.5 border-r border-cyan-900"></td>
-                  <td className="p-1.5 uppercase tracking-wider border-r border-cyan-900 text-slate-400">
-                    PORCENTAJES
-                  </td>
-                  {MESES_LIST.map((m) => (
-                    <td key={`pct-${m}`} className="p-1.5 text-center font-mono text-cyan-300/80 border-r border-cyan-900">
-                      {annualData.totalesPorMes[m] > 0 ? `${annualData.porcentajesPorMes[m].toFixed(2)}%` : '-'}
-                    </td>
-                  ))}
-                  <td className="p-1.5 text-center font-mono text-slate-500 border-r border-cyan-900">
-                    -
-                  </td>
-                  <td className="p-1.5 text-center font-mono font-black text-emerald-400">
-                    100.00%
-                  </td>
-                </tr>
               </tfoot>
             </table>
           </div>
         </div>
       ) : (
-        /* Interactive Data Table Explorer */
         <div className="bg-[#0a182d] rounded-xl border border-cyan-500/30 p-3.5 shadow-xl flex flex-col gap-3">
-          {/* Table Toolbar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-cyan-900/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-cyan-900/50">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
               <h3 className="text-xs font-black uppercase tracking-wider text-cyan-200">
@@ -604,141 +573,138 @@ export const DatabaseExcelHub: React.FC<DatabaseExcelHubProps> = ({
             </div>
           </div>
 
-        {/* Table Content */}
-        <div className="overflow-x-auto border border-cyan-900/50 rounded-lg">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#050e1a] text-cyan-300 uppercase text-[10px] font-black tracking-wider border-b border-cyan-900/60">
-              <tr>
-                <th className="p-2.5">Fecha & Hora</th>
-                <th className="p-2.5">Sector & Zona</th>
-                <th className="p-2.5">Incidencia</th>
-                <th className="p-2.5">Lugar & Referencia</th>
-                <th className="p-2.5">Unidad</th>
-                <th className="p-2.5">Agente</th>
-                <th className="p-2.5">Comisaría</th>
-                <th className="p-2.5">Turno</th>
-                <th className="p-2.5 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-cyan-950 text-slate-300">
-              {paginated.length === 0 ? (
+          <div className="overflow-x-auto border border-cyan-900/50 rounded-lg">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#050e1a] text-cyan-300 uppercase text-[10px] font-black tracking-wider border-b border-cyan-900/60">
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-500">
-                    No se encontraron registros con los términos indicados.
-                  </td>
+                  <th className="p-2.5">Fecha & Hora</th>
+                  <th className="p-2.5">Sector & Zona</th>
+                  <th className="p-2.5">Incidencia</th>
+                  <th className="p-2.5">Lugar & Referencia</th>
+                  <th className="p-2.5">Unidad</th>
+                  <th className="p-2.5">Agente</th>
+                  <th className="p-2.5">Comisaría</th>
+                  <th className="p-2.5">Turno</th>
+                  <th className="p-2.5 text-center">Acciones</th>
                 </tr>
-              ) : (
-                paginated.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#071322] transition-colors">
-                    <td className="p-2.5 whitespace-nowrap text-slate-400 font-mono">
-                      <div className="text-white font-bold">{r.fecha}</div>
-                      <div className="text-[10px] text-cyan-400">{r.hora}</div>
-                    </td>
-                    <td className="p-2.5 whitespace-nowrap">
-                      <strong className="text-cyan-300 font-bold">{r.sector || r.subsector}</strong>
-                      <span className="text-[10px] text-slate-400 block">{r.zona}</span>
-                    </td>
-                    <td className="p-2.5 font-bold text-white whitespace-nowrap">
-                      {r.incidencia || r.tipoIncidencia}
-                    </td>
-                    <td className="p-2.5 max-w-xs text-slate-300">
-                      <div className="truncate font-semibold">{r.lugar || r.ubicacion}</div>
-                      {r.refe && <div className="text-[10px] text-slate-500 truncate">Ref: {r.refe}</div>}
-                    </td>
-                    <td className="p-2.5 text-cyan-200 whitespace-nowrap font-mono text-[11px]">
-                      {r.unidad || r.patrullero || '—'}
-                    </td>
-                    <td className="p-2.5 text-slate-300 whitespace-nowrap text-[11px]">
-                      {r.agente || r.efectivo || '—'}
-                    </td>
-                    <td className="p-2.5 text-slate-400 whitespace-nowrap text-[11px]">
-                      {r.comisar || r.comisaria}
-                    </td>
-                    <td className="p-2.5 whitespace-nowrap">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          r.turno === 'TARDE'
-                            ? 'bg-amber-950 text-amber-300 border border-amber-600/40'
-                            : r.turno === 'MAÑANA'
-                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-600/40'
-                            : 'bg-indigo-950 text-indigo-300 border border-indigo-600/40'
-                        }`}
-                      >
-                        {r.turno}
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => onViewOnMap?.(r)}
-                          className="p-1 rounded text-cyan-400 hover:bg-cyan-950/60"
-                          title="Ver en Mapa Táctico"
-                        >
-                          <MapPin className="w-3.5 h-3.5" />
-                        </button>
-                        {onDeleteRecord && (
-                          <button
-                            onClick={() => onDeleteRecord(r.id)}
-                            className="p-1 rounded text-rose-400 hover:bg-rose-950/60"
-                            title="Eliminar Registro"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-cyan-950 text-slate-300">
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-slate-500">
+                      No se encontraron registros con los términos indicados.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-cyan-900/50 text-xs text-slate-400">
-          <div>
-            Página <strong className="text-white">{currentPage}</strong> de{' '}
-            <strong className="text-white">{totalPages}</strong> &bull; Mostrando{' '}
-            {Math.min(filtered.length, (currentPage - 1) * pageSize + 1)} -{' '}
-            {Math.min(filtered.length, currentPage * pageSize)} de {filtered.length} atenciones
+                ) : (
+                  paginated.map((r) => (
+                    <tr key={r.id} className="hover:bg-[#071322] transition-colors">
+                      <td className="p-2.5 whitespace-nowrap text-slate-400 font-mono">
+                        <div className="text-white font-bold">{r.fecha}</div>
+                        <div className="text-[10px] text-cyan-400">{r.hora}</div>
+                      </td>
+                      <td className="p-2.5 whitespace-nowrap">
+                        <strong className="text-cyan-300 font-bold">{r.sector || r.subsector}</strong>
+                        <span className="text-[10px] text-slate-400 block">{r.zona}</span>
+                      </td>
+                      <td className="p-2.5 font-bold text-white whitespace-nowrap">
+                        {r.incidencia || r.tipoIncidencia}
+                      </td>
+                      <td className="p-2.5 max-w-xs text-slate-300">
+                        <div className="truncate font-semibold">{r.lugar || r.ubicacion}</div>
+                        {r.refe && <div className="text-[10px] text-slate-500 truncate">Ref: {r.refe}</div>}
+                      </td>
+                      <td className="p-2.5 text-cyan-200 whitespace-nowrap font-mono text-[11px]">
+                        {r.unidad || r.patrullero || '—'}
+                      </td>
+                      <td className="p-2.5 text-slate-300 whitespace-nowrap text-[11px]">
+                        {r.agente || r.efectivo || '—'}
+                      </td>
+                      <td className="p-2.5 text-slate-400 whitespace-nowrap text-[11px]">
+                        {r.comisar || r.comisaria}
+                      </td>
+                      <td className="p-2.5 whitespace-nowrap">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            r.turno === 'TARDE'
+                              ? 'bg-amber-950 text-amber-300 border border-amber-600/40'
+                              : r.turno === 'MAÑANA'
+                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-600/40'
+                              : 'bg-indigo-950 text-indigo-300 border border-indigo-600/40'
+                          }`}
+                        >
+                          {r.turno}
+                        </span>
+                      </td>
+                      <td className="p-2.5 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => onViewOnMap?.(r)}
+                            className="p-1 rounded text-cyan-400 hover:bg-cyan-950/60"
+                            title="Ver en Mapa Táctico"
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                          </button>
+                          {onDeleteRecord && (
+                            <button
+                              onClick={() => onDeleteRecord(r.id)}
+                              className="p-1 rounded text-rose-400 hover:bg-rose-950/60"
+                              title="Eliminar Registro"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
-            >
-              &laquo;
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
-            >
-              Anterior
-            </button>
-            <span className="px-2 py-1 font-bold text-white font-mono">{currentPage}</span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
-            >
-              Siguiente
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
-            >
-              &raquo;
-            </button>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-cyan-900/50 text-xs text-slate-400">
+            <div>
+              Página <strong className="text-white">{currentPage}</strong> de{' '}
+              <strong className="text-white">{totalPages}</strong> &bull; Mostrando{' '}
+              {Math.min(filtered.length, (currentPage - 1) * pageSize + 1)} -{' '}
+              {Math.min(filtered.length, currentPage * pageSize)} de {filtered.length} atenciones
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
+              >
+                &laquo;
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
+              >
+                Anterior
+              </button>
+              <span className="px-2 py-1 font-bold text-white font-mono">{currentPage}</span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
+              >
+                Siguiente
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 rounded bg-[#050e1a] border border-cyan-900 disabled:opacity-40 hover:bg-cyan-950 text-cyan-300 font-bold"
+              >
+                &raquo;
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
-      {/* Modal Emergente para Consolidado Anual */}
       <AnnualConsolidatedModal
         isOpen={isAnnualModalOpen}
         onClose={() => setIsAnnualModalOpen(false)}
