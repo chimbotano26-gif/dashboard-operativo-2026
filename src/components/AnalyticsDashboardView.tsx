@@ -284,5 +284,7 @@ const BeveledHorizontalBarChart: React.FC<{
                   </div>
 
                   <div
+                   <div
                     className="relative h-4 rounded-r-md rounded-l-xs border border-[#1e3a8a] shadow-[0_2px_0_#0f172a] overflow-hidden shrink-0"
-                    style={{ width:
+                    style={{ width: `${widthPct}%` }}
+                  >
