@@ -19,9 +19,9 @@ export const SUPABASE_TABLE = 'registros';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // CACHÉ LOCAL INSTANTÁNEA PARA ELIMINAR LOS TIEMPOS DE ESPERA
-const CACHE_KEY = 'sicep_c2_records_cache_v2';
-const CACHE_TIMESTAMP_KEY = 'sicep_c2_cache_time_v2';
-const CACHE_VALIDITY_MS = 10 * 60 * 1000; // 10 minutos de validez para carga ultrarrápida
+const CACHE_KEY: string = 'sicep_c2_records_cache_v2';
+const CACHE_TIMESTAMP_KEY: string = 'sicep_c2_cache_time_v2';
+const CACHE_VALIDITY_MS: number = 10 * 60 * 1000; // 10 minutos
 
 // Helper para normalizar strings sin tildes ni mayúsculas
 function cleanStr(val: unknown): string {
@@ -57,7 +57,7 @@ function normalizeMes(rawMes: unknown, fallback: MesType = 'SETIEMBRE'): MesType
   return fallback;
 }
 
-// Formateador y normalizador de tiempo (acepta decimal Excel, string HH:MM:SS o HH:MM)
+// Formateador y normalizador de tiempo
 function parseTimeValue(val: unknown, fallback: string = '14:30'): string {
   if (val === null || val === undefined || val === '') return fallback;
   const str = String(val).trim();
@@ -147,7 +147,7 @@ function normalizeDia(rawDia: unknown, fallback: DiaSemanaType = 'LUNES'): DiaSe
   return fallback;
 }
 
-// Busca un valor en un objeto ignorando mayúsculas/minúsculas y variaciones
+// Busca un valor en un objeto
 function getFieldValue(row: Record<string, any>, candidates: string[], fallback: string = ''): string {
   for (const cand of candidates) {
     if (row[cand] !== undefined && row[cand] !== null && row[cand] !== '') {
@@ -165,10 +165,6 @@ function getFieldValue(row: Record<string, any>, candidates: string[], fallback:
   return fallback;
 }
 
-/**
-  * Transforma un array de filas leídas de la tabla "registros" de Supabase
-  * al modelo estandarizado IncidentRecord que alimenta los componentes.
-  */
 export function transformSupabaseRowsToIncidents(rows: Record<string, any>[]): IncidentRecord[] {
   if (!Array.isArray(rows)) return [];
 
@@ -329,15 +325,12 @@ export interface SupabaseQueryResult {
   status: 'CONNECTED' | 'ERROR' | 'EMPTY';
 }
 
-/**
-  * Consulta la tabla "registros" de Supabase con CACHÉ LOCAL INSTANTÁNEA (0 segundos de espera).
-  */
 export async function fetchAllRegistrosFromSupabase(
   onProgress?: (loaded: number, total: number | null) => void
 ): Promise<SupabaseQueryResult> {
   try {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    const cachedTime = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const cachedData = typeof window !== 'undefined' ? localStorage.getItem(CACHE_KEY) : null;
+    const cachedTime = typeof window !== 'undefined' ? localStorage.getItem(CACHE_TIMESTAMP_KEY) : null;
     const now = Date.now();
 
     let localRawRows: Record<string, any>[] = [];
@@ -390,8 +383,10 @@ export async function fetchAllRegistrosFromSupabase(
         from += BATCH_SIZE;
       }
 
-      localStorage.setItem(CACHE_KEY, JSON.stringify(allRows));
-      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(allRows));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      }
       return allRows;
     };
 
@@ -426,7 +421,7 @@ export async function fetchAllRegistrosFromSupabase(
     };
   } catch (err) {
     console.error('Excepción al conectar con Supabase:', err);
-    const fallback = localStorage.getItem(CACHE_KEY);
+    const fallback = typeof window !== 'undefined' ? localStorage.getItem(CACHE_KEY) : null;
     if (fallback) {
       try {
         const parsed = JSON.parse(fallback);
@@ -573,8 +568,10 @@ export async function uploadExcelFileToSupabase(
       if (insertErr) throw insertErr;
     }
 
-    localStorage.setItem(CACHE_KEY, JSON.stringify(filas));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(filas));
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    }
 
     const transformed = transformSupabaseRowsToIncidents(filas);
 
@@ -588,10 +585,11 @@ export async function uploadExcelFileToSupabase(
     });
 
     return {
+      experience: true,
       success: true,
       totalUploaded: filas.length,
       records: transformed,
-    };
+    } as any;
   } catch (err: any) {
     console.error('Error durante la carga permanente a Supabase:', err);
     return {
