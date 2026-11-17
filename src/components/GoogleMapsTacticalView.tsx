@@ -170,7 +170,7 @@ export const GoogleMapsTacticalView: React.FC<GoogleMapsTacticalViewProps> = ({
 
   // 3. Filtrar registros de incidencias según término de búsqueda
   const filteredRecords = useMemo(() => {
-    if (!searchFilter.trim()) return records.slice(0, 400);
+    if (!searchFilter.trim()) return records.slice(0, 2000);
     const q = searchFilter.toLowerCase();
     return records
       .filter((r) => {
@@ -182,7 +182,7 @@ export const GoogleMapsTacticalView: React.FC<GoogleMapsTacticalViewProps> = ({
           (r.observacion || '').toLowerCase().includes(q)
         );
       })
-      .slice(0, 400);
+      .slice(0, 2000);
   }, [records, searchFilter]);
 
   // 4. Filtrar unidades de la flota activa (24 Camionetas y 12 Motos)
