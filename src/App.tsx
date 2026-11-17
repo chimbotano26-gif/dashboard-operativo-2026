@@ -27,7 +27,6 @@ import { PlanOperativosView } from './components/PlanOperativosView';
 import ComparativoView from './components/ComparativoView';
 import { DetalleIncidenciasView } from './components/DetalleIncidenciasView';
 import { DatabaseExcelHub } from './components/DatabaseExcelHub';
-
 // COMPONENTE INTRO: HUD 3D Y TELEMETRÍA SEGURA
 function IntroSplashView({ onEnterDashboard }: { onEnterDashboard: () => void }) {
   const [ready, setReady] = useState<boolean>(false);
