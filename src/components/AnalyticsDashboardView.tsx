@@ -1,40 +1,23 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  Shield, Search, Crosshair, Settings, Wifi, CheckSquare,
-  Square, Layers, X, RotateCcw, Activity, FileDown,
-  Edit3, Eye, CalendarRange, Maximize2, Minimize2,
-  Navigation, ChevronDown, ChevronUp, Radio, FilterX, Map as MapIcon, User, Truck, Clock, GripHorizontal
-} from 'lucide-react';
+import React, { useState, useMemo } from 'react';
 import { IncidentRecord } from '../types';
 
 interface AnalyticsDashboardViewProps {
   records: IncidentRecord[];
-  onSelectSubsector?: (code: string) => void;
-  onFilterZona?: (zone: string) => void;
-  onFilterTurno?: (turno: string) => void;
 }
-
-const MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-const MESES_LARGOS = [
-  'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-  'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-];
 
 interface BeveledBarItem {
   label: string;
   count: number;
   pct: number;
-  color?: string;
 }
 
 interface BeveledBarChartProps {
   title: string;
   subtitle: string;
   items: BeveledBarItem[];
-  colorTheme?: 'blue' | 'indigo' | 'emerald' | 'amber';
 }
 
-const BeveledBarChart: React.FC<BeveledBarChartProps> = ({ title, subtitle, items, colorTheme = 'blue' }) => {
+const BeveledBarChart: React.FC<BeveledBarChartProps> = ({ title, subtitle, items }) => {
   if (!items || items.length === 0) return null;
 
   const maxVal = Math.max(...items.map((i) => i.count), 1);
@@ -89,26 +72,9 @@ const BeveledBarChart: React.FC<BeveledBarChartProps> = ({ title, subtitle, item
   );
 };
 
-export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
-  records,
-  onSelectSubsector,
-  onFilterZona,
-  onFilterTurno,
-}) => {
-  const [selectedModalidad, setSelectedModalidad] = useState<string | null>(null);
-  const [selectedMapColor, setSelectedMapColor] = useState<any | null>(null);
-
-  // Estados para mover la tarjeta flotante libremente con el mouse
-  const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isDraggingCard, setIsDraggingCard] = useState<boolean>(false);
-  const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-
+export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({ records }) => {
   const totalIncidencias = records.length;
 
-  // Agrupación por turnos
   const turnosData = useMemo(() => {
     const map: Record<string, number> = { 'MAÑANA': 0, 'TARDE': 0, 'NOCHE': 0 };
     records.forEach((r) => {
@@ -123,7 +89,6 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
     }));
   }, [records, totalIncidencias]);
 
-  // Agrupación por modalidades / tipos de incidencia
   const modalidadesData = useMemo(() => {
     const map: Record<string, number> = {};
     records.forEach((r) => {
