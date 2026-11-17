@@ -9,7 +9,7 @@ interface ComparativoViewProps {
   records: IncidentRecord[];
 }
 
-export const ComparativoView: React.FC<ComparativoViewProps> = ({ records }) => {
+export default function ComparativoView({ records }: ComparativoViewProps) {
   const [excludeSetiembre, setExcludeSetiembre] = useState<boolean>(false);
   const [showFichaSetiembre, setShowFichaSetiembre] = useState<boolean>(false);
 
