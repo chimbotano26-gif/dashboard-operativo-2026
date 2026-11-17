@@ -25,20 +25,14 @@ interface DetalleIncidenciasViewProps {
   lastSavedAt?: string | null;
 }
 
-export default function DetalleIncidenciasView({
+export function DetalleIncidenciasView({
   records,
-  onDeleteRecord,
-  onViewOnMap,
-  onSaveChanges,
-  hasUnsavedChanges,
-  lastSavedAt
-}: DetalleIncidenciasViewProps) {  records,
   onDeleteRecord,
   onViewOnMap,
   onSaveChanges,
   hasUnsavedChanges = false,
   lastSavedAt,
-}) => {
+}: DetalleIncidenciasViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEstado, setSelectedEstado] = useState<string>('TODOS');
   const [currentPage, setCurrentPage] = useState(1);
@@ -292,4 +286,4 @@ export default function DetalleIncidenciasView({
       </div>
     </div>
   );
-};
+}
